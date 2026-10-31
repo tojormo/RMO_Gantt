@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ガントチャート</title>
+<style>
+:root{
+  --left:300px; --row:46px; --grow:38px; --head-m:24px; --head-t:32px;
+  --bg:#f5f7fb; --card:#fff; --line:#e5e7eb; --line2:#cbd5e1; --text:#1f2937; --muted:#6b7280; --primary:#2563eb;
+  --todo:#94a3b8; --doing:#3b82f6; --done:#10b981; --late:#ef4444; --hold:#f59e0b; --other:#8b5cf6;
+}
+@media (max-width:640px){ :root{ --left:150px; --row:52px; } }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;color:var(--text);background:var(--bg);-webkit-text-size-adjust:100%}
+button,select,input{font-family:inherit}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));background:#1f2937;color:#fff}
+.top .ttl{flex:1;min-width:0}
+.top h1{font-size:16px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sub{font-size:11px;color:#cbd5e1}
+.ibtn{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:8px;height:36px;min-width:36px;padding:0 10px;font-size:13px;cursor:pointer}
+.toolbar{background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:0 14px;height:34px;font-size:13px;cursor:pointer;color:var(--text)}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on{background:var(--primary);color:#fff}
+select,input[type=search],input[type=password]{height:34px;border:1px solid var(--line2);border-radius:8px;padding:0 8px;font-size:16px;background:#fff;color:var(--text)}
+@media (min-width:641px){ select,input[type=search]{font-size:13px} }
+input[type=search]{flex:1;min-width:120px}
+.btn{height:34px;border:1px solid var(--line2);background:#fff;border-radius:8px;padding:0 12px;font-size:13px;cursor:pointer;color:var(--text);white-space:nowrap}
+.btn.on{background:#eff6ff;border-color:var(--primary);color:var(--primary)}
+.filters{display:none;width:100%;gap:8px;flex-wrap:wrap}
+.filters.open{display:flex}
+.filters label{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1 1 140px}
+.filters label.chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--text);flex:0 0 auto}
+.filters label.chk input{width:18px;height:18px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;border-radius:999px;padding:3px 10px;background:#f1f5f9;display:inline-flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.scroller{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;background:#fff;overscroll-behavior-x:contain}
+.chart{position:relative;min-height:100%}
+.head{position:sticky;top:0;z-index:5;display:flex;background:#fff;border-bottom:1px solid var(--line2)}
+.corner{position:sticky;left:0;z-index:6;width:var(--left);flex:0 0 var(--left);background:#f8fafc;border-right:1px solid var(--line2);display:flex;align-items:flex-end;padding:6px 10px;font-size:12px;color:var(--muted);font-weight:600}
+.scale{position:relative;flex:0 0 auto}
+.months{position:relative;height:var(--head-m);border-bottom:1px solid var(--line)}
+.month{position:absolute;top:0;height:100%;border-left:1px solid var(--line2);font-size:11px;font-weight:700;padding:4px 6px;white-space:nowrap;overflow:hidden;color:#334155}
+.ticks{position:relative;height:var(--head-t)}
+.ticks.hide{display:none}
+.tick{position:absolute;top:0;height:100%;font-size:10px;text-align:center;color:var(--muted);line-height:1.25;padding-top:3px;border-left:1px solid var(--line);overflow:hidden;white-space:nowrap}
+.tick.sat{color:#2563eb}.tick.sun{color:#dc2626}
+.tick.today{background:#fee2e2;color:#b91c1c;font-weight:700}
+.body{position:relative}
+.grid{position:absolute;top:0;bottom:0;pointer-events:none;z-index:0}
+.grid .we{position:absolute;top:0;bottom:0;background:#f3f6fa}
+.grid .wl{position:absolute;top:0;bottom:0;border-left:1px solid #eef1f5}
+.grid .ml{position:absolute;top:0;bottom:0;border-left:1px solid var(--line2)}
+.grid .td{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--late);opacity:.75}
+.row{display:flex;height:var(--row);border-bottom:1px solid var(--line);position:relative;z-index:1;cursor:pointer}
+.row:hover .cell-left,.row:active .cell-left{background:#f8fafc}
+.row:hover .cell-time{background:rgba(37,99,235,.04)}
+.cell-left{position:sticky;left:0;z-index:3;width:var(--left);flex:0 0 var(--left);background:#fff;border-right:1px solid var(--line2);padding:4px 10px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.t-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.t-name span{overflow:hidden;text-overflow:ellipsis}
+.t-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell-time{position:relative;flex:0 0 auto}
+.bar{position:absolute;top:50%;transform:translateY(-50%);height:22px;border-radius:6px;background:var(--todo);color:#fff;font-size:11px;line-height:22px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.s-todo{background:var(--todo)}.s-doing{background:var(--doing)}.s-done{background:var(--done)}
+.s-late{background:var(--late)}.s-hold{background:var(--hold)}.s-other{background:var(--other)}
+.bar.overdue{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--late)}
+.blabel{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;color:#475569;white-space:nowrap;pointer-events:none}
+.nodate{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
+.row.group{height:var(--grow)}
+.row.group .cell-left{background:#eef2ff;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;font-size:13px;font-weight:700;color:#3730a3}
+.row.group .cell-time{background:rgba(238,242,255,.6)}
+.row.group .caret{display:inline-block;width:14px;transition:transform .15s}
+.row.group.collapsed .caret{transform:rotate(-90deg)}
+.row.group .cnt{font-weight:400;color:#6366f1;font-size:11px}
+.gbar{position:absolute;top:50%;height:8px;transform:translateY(-50%);background:#6366f1;border-radius:4px;opacity:.55}
+.empty,.errbox{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px}
+.errbox{color:#b91c1c}
+.errbox .btn{margin-top:12px}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:50;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.login{background:#fff;border-radius:14px;width:100%;max-width:360px;padding:22px}
+.login h2{margin:0 0 6px;font-size:18px}
+.login p{margin:0 0 14px;font-size:13px;color:var(--muted)}
+.login input{width:100%;height:44px;margin-bottom:10px}
+.login .msg{color:#b91c1c;font-size:13px;min-height:18px;margin-bottom:8px}
+.login .primary{width:100%;height:44px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.sheet-ov{align-items:flex-end;padding:0}
+@media (min-width:641px){ .sheet-ov{align-items:center;padding:16px} }
+.sheet{background:#fff;width:100%;max-width:560px;max-height:85dvh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom))}
+@media (min-width:641px){ .sheet{border-radius:14px} }
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:#cbd5e1;margin:0 auto 12px}
+.sheet h3{margin:0 0 4px;font-size:17px}
+.sheet .badges{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.badge{font-size:11px;padding:3px 8px;border-radius:999px;color:#fff}
+.badge.warn{background:var(--late)}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:8px 12px;font-size:14px}
+.kv dt{color:var(--muted);font-size:12px;padding-top:2px}
+.kv dd{margin:0;white-space:pre-wrap;word-break:break-word}
+.sheet .close{margin-top:16px;width:100%;height:42px}
+.loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.55);z-index:40}
+.loading.on{display:flex}
+.spin{width:36px;height:36px;border:4px solid #dbeafe;border-top-color:var(--primary);border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="ttl">
+      <h1 id="title">ガントチャート</h1>
+      <div class="sub" id="updated">—</div>
+    </div>
+    <button class="ibtn" id="btnReload" title="最新を取得">⟳</button>
+    <button class="ibtn" id="btnLogout" title="ログアウト">⎋</button>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" id="zoomSeg">
+      <button data-z="day">日</button><button data-z="week">週</button><button data-z="month">月</button>
+    </div>
+    <button class="btn" id="btnToday">今日</button>
+    <button class="btn" id="btnFilter">絞り込み</button>
+    <input type="search" id="q" placeholder="検索（タスク・オーナー等）">
+    <div class="filters" id="filters">
+      <label>グループ
+        <select id="groupBy">
+          <option value="none">なし</option>
+          <option value="event">Event</option>
+          <option value="category">Category</option>
+          <option value="owner">タスクオーナー</option>
+          <option value="status">Status</option>
+        </select>
+      </label>
+      <label>並び順
+        <select id="sortBy">
+          <option value="wbs">WBS順</option>
+          <option value="start">開始日順</option>
+          <option value="end">終了日順</option>
+        </select>
+      </label>
+      <label>Event<select id="fEvent"></select></label>
+      <label>Category<select id="fCategory"></select></label>
+      <label>タスクオーナー<select id="fOwner"></select></label>
+      <label>Status<select id="fStatus"></select></label>
+      <label class="chk"><input type="checkbox" id="hideDone">完了を隠す</label>
+      <label class="chk"><input type="checkbox" id="onlyOverdue">期限超過のみ</label>
+      <button class="btn" id="btnClear">条件クリア</button>
+    </div>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="scroller" id="scroller">
+    <div class="chart" id="chart"></div>
+  </div>
+</div>
+
+<div class="overlay" id="loginOv">
+  <form class="login" id="loginForm" autocomplete="on">
+    <h2>パスワード</h2>
+    <p>閲覧用パスワードを入力してください。次回以降は自動でログインします。</p>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="パスワード" required>
+    <div class="msg" id="loginMsg"></div>
+    <button class="primary" type="submit">表示する</button>
+  </form>
+</div>
+
+<div class="overlay sheet-ov" id="detailOv">
+  <div class="sheet" id="detail"></div>
+</div>
+
+<div class="loading" id="loading"><div class="spin"></div></div>
+
+<script>
+/* GASのURLから開く場合は空のままでOK。外部ホスティング時はウェブアプリURL(/exec)を設定 */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxz9LsWMF19uylm_T7s3-150QOUiMbcUg98UxoVwD9H8-zPWDxdypJplFYwXVIELGU3hA/exec';
+
+const PW_KEY = 'gantt_pw';
+const PREF_KEY = 'gantt_prefs';
+const DAY = 86400000;
+const ZOOMS = { day: 32, week: 12, month: 4 };
+const WD = ['日','月','火','水','木','金','土'];
+const STATUS = {
+  todo:  { label: '未着手', color: 'var(--todo)' },
+  doing: { label: '進行中', color: 'var(--doing)' },
+  done:  { label: '完了',   color: 'var(--done)' },
+  late:  { label: '遅延',   color: 'var(--late)' },
+  hold:  { label: '保留',   color: 'var(--hold)' },
+  other: { label: 'その他', color: 'var(--other)' },
+};
+
+const $ = (id) => document.getElementById(id);
+const state = {
+  tasks: [], meta: {},
+  zoom: window.innerWidth <= 640 ? 'week' : 'day',
+  groupBy: 'event', sortBy: 'wbs',
+  f: { event: '', category: '', owner: '', status: '', q: '', hideDone: false, onlyOverdue: false },
+  collapsed: new Set(),
+  scrollToToday: true,
+  range: null,
+};
+const TODAY = (() => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY; })();
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPrefs();
+  bindUI();
+  const pw = localStorage.getItem(PW_KEY);
+  if (pw) fetchData(pw); else showLogin();
+});
+
+function callApi(password) {
+  if (window.google && google.script && google.script.run) {
+    return new Promise((resolve, reject) =>
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getData(password));
+  }
+  if (!API_URL) return Promise.reject(new Error('API_URL が設定されていません'));
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ password }),
+    cache: 'no-store',
+    redirect: 'follow',
+  }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+}
+
+async function fetchData(pw) {
+  setLoading(true);
+  try {
+    const res = await callApi(pw);
+    if (!res || !res.ok) {
+      if (res && (res.error === 'AUTH' || res.error === 'LOCKED')) {
+        localStorage.removeItem(PW_KEY);
+        showLogin(res.message);
+        return;
+      }
+      throw new Error((res && res.message) || 'データ取得に失敗しました');
+    }
+    localStorage.setItem(PW_KEY, pw);
+    hideLogin();
+    state.meta = res;
+    state.tasks = (res.tasks || []).map(normalize);
+    $('title').textContent = res.title || 'ガントチャート';
+    document.title = res.title || 'ガントチャート';
+    $('updated').textContent = '取得: ' + res.updatedAt + '　' + state.tasks.length + '件';
+    buildFilterOptions();
+    render();
+  } catch (e) {
+    showError(e.message || String(e));
+  } finally {
+    setLoading(false);
+  }
+}
+
+function toNum(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return Date.UTC(y, m - 1, d) / DAY;
+}
+function fromNum(n) { return new Date(n * DAY); }
+function fmt(n, withYear) {
+  if (n == null) return '';
+  const d = fromNum(n);
+  const md = (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
+  return withYear ? d.getUTCFullYear() + '/' + md + '(' + WD[d.getUTCDay()] + ')' : md;
+}
+function statusKey(s) {
+  const v = (s || '').toLowerCase();
+  if (!v || /未着手|未開始|todo|not ?started|open/.test(v)) return 'todo';
+  if (/完了|済|done|complete|closed/.test(v)) return 'done';
+  if (/遅延|遅れ|delay|late|overdue/.test(v)) return 'late';
+  if (/保留|中止|中断|hold|pending|cancel/.test(v)) return 'hold';
+  if (/進行|着手|対応中|作業中|実施中|progress|doing|wip/.test(v)) return 'doing';
+  return 'other';
+}
+function normalize(t, i) {
+  let s = toNum(t.start), e = toNum(t.end);
+  if (s == null && e != null) s = e;
+  if (e == null && s != null) e = s;
+  if (s != null && e < s) [s, e] = [e, s];
+  const sk = statusKey(t.status);
+  return Object.assign({}, t, { _i: i, s, e, sk, overdue: e != null && e < TODAY && sk !== 'done' });
+}
+function cmpWbs(a, b) {
+  if (!a && !b) return 0; if (!a) return 1; if (!b) return -1;
+  const pa = a.split(/[.\-_]/), pb = b.split(/[.\-_]/);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if (pa[i] == null) return -1; if (pb[i] == null) return 1;
+    const na = Number(pa[i]), nb = Number(pb[i]);
+    const c = (!isNaN(na) && !isNaN(nb)) ? na - nb : pa[i].localeCompare(pb[i], 'ja');
+    if (c) return c;
+  }
+  return 0;
+}
+function getVisible() {
+  const f = state.f, q = f.q.trim().toLowerCase();
+  const list = state.tasks.filter((t) =>
+    (!f.event || t.event === f.event) &&
+    (!f.category || t.category === f.category) &&
+    (!f.owner || t.owner === f.owner) &&
+    (!f.status || t.status === f.status) &&
+    (!f.hideDone || t.sk !== 'done') &&
+    (!f.onlyOverdue || t.overdue) &&
+    (!q || [t.wbs, t.event, t.category, t.task, t.owner, t.status, t.kpi, t.note].join(' ').toLowerCase().includes(q))
+  );
+  const nz = (v) => (v == null ? Infinity : v);
+  const sorters = {
+    wbs: (a, b) => cmpWbs(a.wbs, b.wbs) || a.row - b.row,
+    start: (a, b) => nz(a.s) - nz(b.s) || cmpWbs(a.wbs, b.wbs),
+    end: (a, b) => nz(a.e) - nz(b.e) || cmpWbs(a.wbs, b.wbs),
+  };
+  return list.sort(sorters[state.sortBy]);
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function leftWidth() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left'), 10) || 150; }
+
+function calcRange() {
+  let min = Infinity, max = -Infinity;
+  state.tasks.forEach((t) => { if (t.s != null) { min = Math.min(min, t.s); max = Math.max(max, t.e); } });
+  min = Math.min(isFinite(min) ? min : TODAY, TODAY);
+  max = Math.max(isFinite(max) ? max : TODAY, TODAY);
+  const a = fromNum(min), b = fromNum(max);
+  const start = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / DAY;
+  const end = Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + 1, 0) / DAY;
+  return { start, end, days: end - start + 1 };
+}
+
+function render() {
+  const scroller = $('scroller');
+  const keepTop = scroller.scrollTop, keepLeft = scroller.scrollLeft;
+  const dw = ZOOMS[state.zoom];
+  const R = state.range = calcRange();
+  const W = R.days * dw;
+  const L = leftWidth();
+  const list = getVisible();
+
+  renderChips(list);
+
+  let months = '';
+  for (let d = fromNum(R.start); d.getTime() / DAY <= R.end; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
+    const s = d.getTime() / DAY;
+    const dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    const label = state.zoom === 'month' ? (d.getUTCMonth() + 1) + '月' + (d.getUTCMonth() === 0 || s === R.start ? ' ' + d.getUTCFullYear() : '')
+                                         : d.getUTCFullYear() + '年' + (d.getUTCMonth() + 1) + '月';
+    months += `<div class="month" style="left:${(s - R.start) * dw}px;width:${dim * dw}px">${label}</div>`;
+  }
+
+  let ticks = '', grid = '';
+  for (let n = R.start; n <= R.end; n++) {
+    const d = fromNum(n), wd = d.getUTCDay(), x = (n - R.start) * dw;
+    if (d.getUTCDate() === 1) grid += `<div class="ml" style="left:${x}px"></div>`;
+    if ((wd === 0 || wd === 6) && state.zoom !== 'month') grid += `<div class="we" style="left:${x}px;width:${dw}px"></div>`;
+    if (state.zoom === 'day') {
+      grid += `<div class="wl" style="left:${x}px"></div>`;
+      const cls = (wd === 6 ? ' sat' : wd === 0 ? ' sun' : '') + (n === TODAY ? ' today' : '');
+      ticks += `<div class="tick${cls}" style="left:${x}px;width:${dw}px">${d.getUTCDate()}<br>${WD[wd]}</div>`;
+    } else if (state.zoom === 'week' && wd === 1) {
+      grid += `<div class="wl" style="left:${x}px"></div>`;
+      ticks += `<div class="tick" style="left:${x}px;width:${7 * dw}px">${fmt(n)}</div>`;
+    }
+  }
+  grid += `<div class="td" style="left:${(TODAY - R.start) * dw + dw / 2}px"></div>`;
+
+  let rows = '';
+  if (!list.length) {
+    rows = `<div class="empty" style="position:sticky;left:0;width:min(100vw,${L + W}px)">該当するタスクがありません</div>`;
+  } else if (state.groupBy === 'none') {
+    rows = list.map((t) => taskRow(t, R, dw, W)).join('');
+  } else {
+    const groups = new Map();
+    list.forEach((t) => {
+      const k = t[state.groupBy] || '(未設定)';
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(t);
+    });
+    groups.forEach((arr, k) => {
+      const gid = state.groupBy + ':' + k;
+      const col = state.collapsed.has(gid);
+      const ss = arr.filter((t) => t.s != null);
+      let gbar = '';
+      if (ss.length) {
+        const gs = Math.min(...ss.map((t) => t.s)), ge = Math.max(...ss.map((t) => t.e));
+        gbar = `<div class="gbar" style="left:${(gs - R.start) * dw}px;width:${Math.max((ge - gs + 1) * dw, 6)}px"></div>`;
+      }
+      const done = arr.filter((t) => t.sk === 'done').length;
+      rows += `<div class="row group${col ? ' collapsed' : ''}" data-g="${esc(gid)}">
+        <div class="cell-left"><span class="caret">▼</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span><span class="cnt">${done}/${arr.length}</span></div>
+        <div class="cell-time" style="width:${W}px">${gbar}</div></div>`;
+      if (!col) rows += arr.map((t) => taskRow(t, R, dw, W)).join('');
+    });
+  }
+
+  $('chart').style.width = (L + W) + 'px';
+  $('chart').innerHTML = `
+    <div class="head">
+      <div class="corner">タスク</div>
+      <div class="scale" style="width:${W}px">
+        <div class="months">${months}</div>
+        <div class="ticks${state.zoom === 'month' ? ' hide' : ''}">${ticks}</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid" style="left:${L}px;width:${W}px">${grid}</div>
+      ${rows}
+    </div>`;
+
+  if (state.scrollToToday) {
+    state.scrollToToday = false;
+    goToday();
+  } else {
+    scroller.scrollTop = keepTop;
+    scroller.scrollLeft = keepLeft;
+  }
+}
+
+function taskRow(t, R, dw, W) {
+  const st = STATUS[t.sk];
+  const meta = [t.wbs, t.owner, t.s != null ? fmt(t.s) + '–' + fmt(t.e) : '日付未設定'].filter(Boolean).join(' · ');
+  let time;
+  if (t.s == null) {
+    time = `<span class="nodate" style="left:${(TODAY - R.start) * dw + 8}px">日付未設定</span>`;
+  } else {
+    const x = (t.s - R.start) * dw, w = Math.max((t.e - t.s + 1) * dw, 6);
+    const inside = w >= 90;
+    time = `<div class="bar s-${t.sk}${t.overdue ? ' overdue' : ''}" style="left:${x}px;width:${w}px">${inside ? esc(t.task) : ''}</div>`
+         + (inside ? '' : `<span class="blabel" style="left:${x + w + 6}px">${esc(t.task)}</span>`);
+  }
+  return `<div class="row" data-i="${t._i}">
+    <div class="cell-left">
+      <div class="t-name"><i class="dot" style="background:${st.color}"></i><span>${esc(t.task || '(無題)')}</span>${t.overdue ? '<b style="color:var(--late);font-size:11px">!</b>' : ''}</div>
+      <div class="t-meta">${esc(meta)}</div>
+    </div>
+    <div class="cell-time" style="width:${W}px">${time}</div></div>`;
+}
+
+function renderChips(list) {
+  const cnt = {}; let overdue = 0;
+  list.forEach((t) => { cnt[t.sk] = (cnt[t.sk] || 0) + 1; if (t.overdue) overdue++; });
+  let h = `<span class="chip"><b>${list.length}</b>件</span>`;
+  Object.keys(STATUS).forEach((k) => {
+    if (cnt[k]) h += `<span class="chip"><i class="dot" style="background:${STATUS[k].color}"></i>${STATUS[k].label} ${cnt[k]}</span>`;
+  });
+  if (overdue) h += `<span class="chip" style="background:#fee2e2;color:#b91c1c">期限超過 ${overdue}</span>`;
+  $('chips').innerHTML = h;
+}
+
+function goToday() {
+  if (!state.range) return;
+  const sc = $('scroller');
+  const x = (TODAY - state.range.start) * ZOOMS[state.zoom];
+  const visible = sc.clientWidth - leftWidth();
+  sc.scrollLeft = Math.max(0, x - visible * 0.3);
+}
+
+function openDetail(i) {
+  const t = state.tasks.find((x) => x._i === i);
+  if (!t) return;
+  const st = STATUS[t.sk];
+  const days = t.s != null ? (t.e - t.s + 1) + '日間' : '';
+  const remain = t.e != null && t.sk !== 'done'
+    ? (t.e >= TODAY ? '残り ' + (t.e - TODAY) + '日' : (TODAY - t.e) + '日超過') : '';
+  const kv = [
+    ['WBS', t.wbs], ['Event', t.event], ['Category', t.category], ['タスクオーナー', t.owner],
+    ['開始日', fmt(t.s, true)], ['終了日', fmt(t.e, true)], ['期間', [days, remain].filter(Boolean).join(' / ')],
+    ['Status', t.status], ['KPI', t.kpi], ['備考', t.note],
+  ];
+  $('detail').innerHTML = `
+    <div class="grab"></div>
+    <h3>${esc(t.task || '(無題)')}</h3>
+    <div class="badges">
+      <span class="badge" style="background:${st.color}">${esc(t.status || st.label)}</span>
+      ${t.overdue ? '<span class="badge warn">期限超過</span>' : ''}
+    </div>
+    <dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v || '—')}</dd>`).join('')}</dl>
+    <button class="btn close" id="btnClose">閉じる</button>`;
+  $('detailOv').classList.add('open');
+  $('btnClose').onclick = closeDetail;
+}
+function closeDetail() { $('detailOv').classList.remove('open'); }
+
+function buildFilterOptions() {
+  const fill = (id, key) => {
+    const vals = [...new Set(state.tasks.map((t) => t[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+    if (state.f[key] && !vals.includes(state.f[key])) state.f[key] = '';
+    $(id).innerHTML = '<option value="">すべて</option>' + vals.map((v) => `<option${v === state.f[key] ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  };
+  fill('fEvent', 'event'); fill('fCategory', 'category'); fill('fOwner', 'owner'); fill('fStatus', 'status');
+}
+
+function bindUI() {
+  syncControls();
+  $('zoomSeg').addEventListener('click', (e) => {
+    const z = e.target.dataset.z; if (!z) return;
+    state.zoom = z; state.scrollToToday = true; savePrefs(); syncControls(); render();
+  });
+  $('btnToday').onclick = goToday;
+  $('btnFilter').onclick = () => { $('filters').classList.toggle('open'); $('btnFilter').classList.toggle('on'); };
+  $('groupBy').onchange = (e) => { state.groupBy = e.target.value; savePrefs(); render(); };
+  $('sortBy').onchange = (e) => { state.sortBy = e.target.value; savePrefs(); render(); };
+  [['fEvent', 'event'], ['fCategory', 'category'], ['fOwner', 'owner'], ['fStatus', 'status']].forEach(([id, k]) => {
+    $(id).onchange = (e) => { state.f[k] = e.target.value; render(); };
+  });
+  $('hideDone').onchange = (e) => { state.f.hideDone = e.target.checked; savePrefs(); render(); };
+  $('onlyOverdue').onchange = (e) => { state.f.onlyOverdue = e.target.checked; render(); };
+  let timer;
+  $('q').addEventListener('input', (e) => { clearTimeout(timer); timer = setTimeout(() => { state.f.q = e.target.value; render(); }, 200); });
+  $('btnClear').onclick = () => {
+    state.f = { event: '', category: '', owner: '', status: '', q: '', hideDone: false, onlyOverdue: false };
+    $('q').value = ''; syncControls(); buildFilterOptions(); savePrefs(); render();
+  };
+  $('chart').addEventListener('click', (e) => {
+    const row = e.target.closest('.row'); if (!row) return;
+    if (row.dataset.g != null) {
+      const g = row.dataset.g;
+      state.collapsed.has(g) ? state.collapsed.delete(g) : state.collapsed.add(g);
+      render();
+    } else if (row.dataset.i != null) {
+      openDetail(Number(row.dataset.i));
+    }
+  });
+  $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+  $('btnReload').onclick = () => { const pw = localStorage.getItem(PW_KEY); pw ? fetchData(pw) : showLogin(); };
+  $('btnLogout').onclick = () => {
+    if (!confirm('保存されたパスワードを削除してログアウトしますか？')) return;
+    localStorage.removeItem(PW_KEY);
+    state.tasks = []; $('chart').innerHTML = ''; $('chips').innerHTML = ''; $('updated').textContent = '—';
+    showLogin();
+  };
+  $('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pw = $('pw').value;
+    if (!pw) return;
+    $('loginMsg').textContent = '';
+    fetchData(pw);
+  });
+  let lastL = leftWidth(), rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { const l = leftWidth(); if (l !== lastL && state.tasks.length) { lastL = l; render(); } }, 150);
+  });
+}
+
+function syncControls() {
+  document.querySelectorAll('#zoomSeg button').forEach((b) => b.classList.toggle('on', b.dataset.z === state.zoom));
+  $('groupBy').value = state.groupBy;
+  $('sortBy').value = state.sortBy;
+  $('hideDone').checked = state.f.hideDone;
+  $('onlyOverdue').checked = state.f.onlyOverdue;
+}
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+    if (p.zoom in ZOOMS) state.zoom = p.zoom;
+    if (p.groupBy) state.groupBy = p.groupBy;
+    if (p.sortBy) state.sortBy = p.sortBy;
+    state.f.hideDone = !!p.hideDone;
+  } catch (_) {}
+}
+function savePrefs() {
+  localStorage.setItem(PREF_KEY, JSON.stringify({ zoom: state.zoom, groupBy: state.groupBy, sortBy: state.sortBy, hideDone: state.f.hideDone }));
+}
+function showLogin(msg) {
+  $('loginMsg').textContent = msg || '';
+  $('pw').value = '';
+  $('loginOv').classList.add('open');
+  setTimeout(() => $('pw').focus(), 50);
+}
+function hideLogin() { $('loginOv').classList.remove('open'); }
+function setLoading(on) { $('loading').classList.toggle('on', on); }
+function showError(msg) {
+  $('chart').style.width = '100%';
+  $('chart').innerHTML = `<div class="errbox">⚠ ${esc(msg)}<br><button class="btn" id="btnRetry">再試行</button></div>`;
+  $('btnRetry').onclick = () => $('btnReload').click();
+}
+</script>
+</body>
+</html>
