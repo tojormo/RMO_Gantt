@@ -1,0 +1,111 @@
+/**
+ * WBSガントチャート用 GAS
+ * スクリプトプロパティ：SHEET_ID（必須） / PASSWORD（必須） / SHEET_NAME（任意）
+ */
+const HEADER_MAP = {
+  'WBS': 'wbs', 'Event': 'event', 'Category': 'category', 'タスク': 'task',
+  'タスクオーナー': 'owner', '開始日': 'start', '終了日': 'end',
+  'Status': 'status', 'KPI': 'kpi', '備考': 'note',
+};
+const DATE_KEYS = ['start', 'end'];
+const MAX_FAILS = 20;
+const LOCK_SECONDS = 600;
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('WBS Timeline')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function doPost(e) {
+  let body = {};
+  try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (_) {}
+  return ContentService.createTextOutput(JSON.stringify(handle_(body.password)))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getData(password) { return handle_(password); }
+
+function handle_(password) {
+  try {
+    const auth = checkPassword_(password);
+    if (auth !== true) return auth;
+    const data = readSheet_();
+    data.ok = true;
+    return data;
+  } catch (err) {
+    return { ok: false, error: 'SERVER', message: String((err && err.message) || err) };
+  }
+}
+
+function checkPassword_(password) {
+  const expected = PropertiesService.getScriptProperties().getProperty('PASSWORD');
+  if (!expected) throw new Error('スクリプトプロパティ PASSWORD が未設定です');
+  const cache = CacheService.getScriptCache();
+  const fails = Number(cache.get('auth_fails') || 0);
+  if (fails >= MAX_FAILS) {
+    return { ok: false, error: 'LOCKED', message: '試行回数が多すぎます。しばらくしてから再度お試しください' };
+  }
+  if (typeof password === 'string' && password.length > 0 && password === expected) return true;
+  cache.put('auth_fails', String(fails + 1), LOCK_SECONDS);
+  Utilities.sleep(800);
+  return { ok: false, error: 'AUTH', message: 'パスワードが違います' };
+}
+
+function readSheet_() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  if (!sheetId) throw new Error('スクリプトプロパティ SHEET_ID が未設定です');
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheetName = props.getProperty('SHEET_NAME');
+  const sh = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
+  if (!sh) throw new Error('シートが見つかりません: ' + sheetName);
+
+  const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone();
+  const base = {
+    title: ss.getName(), sheetName: sh.getName(),
+    updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'), tasks: [],
+  };
+  const range = sh.getDataRange();
+  const values = range.getValues();
+  const displays = range.getDisplayValues();
+  if (values.length < 2) return base;
+
+  const header = displays[0].map(function (h) { return String(h).trim(); });
+  const idx = {}, missing = [];
+  Object.keys(HEADER_MAP).forEach(function (h) {
+    const i = header.indexOf(h);
+    if (i === -1) missing.push(h);
+    idx[HEADER_MAP[h]] = i;
+  });
+  if (missing.length) throw new Error('ヘッダーが見つかりません: ' + missing.join(', '));
+
+  for (let r = 1; r < values.length; r++) {
+    const row = values[r], disp = displays[r];
+    if (disp.every(function (v) { return String(v).trim() === ''; })) continue;
+    const t = { row: r + 1 };
+    Object.keys(idx).forEach(function (key) {
+      const i = idx[key];
+      t[key] = DATE_KEYS.indexOf(key) !== -1
+        ? toDateStr_(row[i], disp[i], tz)
+        : String(disp[i] == null ? '' : disp[i]).trim();
+    });
+    base.tasks.push(t);
+  }
+  return base;
+}
+
+/** Date / 文字列（2026/4/1, 2026-04-01, 2026年4月1日 など）→ yyyy-MM-dd */
+function toDateStr_(value, display, tz) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, tz, 'yyyy-MM-dd');
+  }
+  const s = String(display || value || '').trim();
+  const m = s.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  return '';
+}
+
+function testRead() { Logger.log(JSON.stringify(readSheet_(), null, 2)); }
+function resetAuthLock() { CacheService.getScriptCache().remove('auth_fails'); }

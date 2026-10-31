@@ -4,582 +4,587 @@
 <base target="_top">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ガントチャート</title>
+<title>WBS Timeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --left:300px; --row:46px; --grow:38px; --head-m:24px; --head-t:32px;
-  --bg:#f5f7fb; --card:#fff; --line:#e5e7eb; --line2:#cbd5e1; --text:#1f2937; --muted:#6b7280; --primary:#2563eb;
-  --todo:#94a3b8; --doing:#3b82f6; --done:#10b981; --late:#ef4444; --hold:#f59e0b; --other:#8b5cf6;
+  --ink:#0a0a0a; --ink2:#3a3a3a; --mute:#8a8a8a; --hair:#e6e6e6; --hair2:#cfcfcf; --paper:#ffffff; --tint:#f6f6f6;
+  --lv1:#0a0a0a; --lv2:#7a7a7a; --lv3:#c9c9c9;
+  --accent:#e4002b;
+  --left:340px; --h1:56px; --h2:46px; --h3:40px;
+  --font:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
 }
-@media (max-width:640px){ :root{ --left:150px; --row:52px; } }
+@media (max-width:640px){ :root{ --left:168px; --h1:58px; --h2:50px; --h3:46px; } }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;color:var(--text);background:var(--bg);-webkit-text-size-adjust:100%}
-button,select,input{font-family:inherit}
+body{font-family:var(--font);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;letter-spacing:.01em}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
 .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
-.top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));background:#1f2937;color:#fff}
-.top .ttl{flex:1;min-width:0}
-.top h1{font-size:16px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top .sub{font-size:11px;color:#cbd5e1}
-.ibtn{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:8px;height:36px;min-width:36px;padding:0 10px;font-size:13px;cursor:pointer}
-.toolbar{background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
-.seg button{border:0;background:#fff;padding:0 14px;height:34px;font-size:13px;cursor:pointer;color:var(--text)}
-.seg button+button{border-left:1px solid var(--line2)}
-.seg button.on{background:var(--primary);color:#fff}
-select,input[type=search],input[type=password]{height:34px;border:1px solid var(--line2);border-radius:8px;padding:0 8px;font-size:16px;background:#fff;color:var(--text)}
-@media (min-width:641px){ select,input[type=search]{font-size:13px} }
-input[type=search]{flex:1;min-width:120px}
-.btn{height:34px;border:1px solid var(--line2);background:#fff;border-radius:8px;padding:0 12px;font-size:13px;cursor:pointer;color:var(--text);white-space:nowrap}
-.btn.on{background:#eff6ff;border-color:var(--primary);color:var(--primary)}
-.filters{display:none;width:100%;gap:8px;flex-wrap:wrap}
+
+/* ===== Header ===== */
+.hd{display:flex;align-items:center;gap:24px;padding:12px 28px;padding-top:calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--ink)}
+.hd .brand{flex:0 1 auto;min-width:0}
+.eyebrow{font-size:10px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--mute)}
+.hd h1{margin:0;font-size:16px;font-weight:900;line-height:1.2;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd .upd{font-size:10px;color:var(--mute);margin-top:2px;letter-spacing:.06em;white-space:nowrap}
+.txtbtn{background:none;border:0;padding:6px 0;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);position:relative}
+.txtbtn::after{content:"";position:absolute;left:0;right:100%;bottom:2px;height:1px;background:var(--ink);transition:right .25s}
+.txtbtn:hover::after,.txtbtn.on::after{right:0}
+.hd nav{display:flex;gap:18px;margin-left:auto}
+
+/* ===== KPI ===== */
+.stats{display:flex;align-items:center;border-left:1px solid var(--hair2)}
+.stat{display:flex;align-items:baseline;gap:6px;padding:0 16px;border-right:1px solid var(--hair)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:16px;font-weight:800;line-height:1;font-feature-settings:"tnum"}
+.stat .l{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.stat.alert .n{color:var(--accent)}
+
+@media (max-width:640px){
+  .hd{padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top))}
+  .hd .brand,.stats{display:none}
+  .hd nav{gap:14px}
+}
+
+/* ===== Toolbar ===== */
+.tb{display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;padding:10px 28px;border-bottom:1px solid var(--hair)}
+.tb .grp{display:flex;gap:14px;align-items:center}
+.tb .sep{width:1px;height:14px;background:var(--hair2)}
+.search{flex:1;min-width:140px;border:0;border-bottom:1px solid var(--hair2);height:32px;font-size:16px;padding:0 2px;outline:none;background:transparent}
+.search:focus{border-bottom-color:var(--ink)}
+@media (min-width:641px){ .search{font-size:13px} }
+.legend{display:flex;gap:14px;align-items:center;font-size:10px;letter-spacing:.16em;color:var(--mute);font-weight:600}
+.legend i{display:inline-block;width:18px;height:6px;margin-right:6px;vertical-align:middle}
+.filters{display:none;width:100%;gap:12px 20px;flex-wrap:wrap;padding:8px 0 4px}
 .filters.open{display:flex}
-.filters label{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1 1 140px}
-.filters label.chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--text);flex:0 0 auto}
-.filters label.chk input{width:18px;height:18px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip{white-space:nowrap;border-radius:999px;padding:3px 10px;background:#f1f5f9;display:inline-flex;align-items:center;gap:5px}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
-.scroller{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;background:#fff;overscroll-behavior-x:contain}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);flex:1 1 150px}
+.filters select{height:34px;border:0;border-bottom:1px solid var(--hair2);background:transparent;font-size:16px;border-radius:0;-webkit-appearance:none;appearance:none;padding:0 2px;color:var(--ink);letter-spacing:0;text-transform:none}
+@media (min-width:641px){ .filters select{font-size:13px} }
+.filters .chk{flex-direction:row;align-items:center;gap:8px;flex:0 0 auto;font-size:11px;letter-spacing:.1em;color:var(--ink)}
+.filters .chk input{width:16px;height:16px;accent-color:var(--ink)}
+@media (max-width:640px){ .tb{padding:8px 16px;gap:6px 14px} .legend{display:none} }
+
+/* ===== Chart ===== */
+.scroller{flex:1;min-height:0;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 .chart{position:relative;min-height:100%}
-.head{position:sticky;top:0;z-index:5;display:flex;background:#fff;border-bottom:1px solid var(--line2)}
-.corner{position:sticky;left:0;z-index:6;width:var(--left);flex:0 0 var(--left);background:#f8fafc;border-right:1px solid var(--line2);display:flex;align-items:flex-end;padding:6px 10px;font-size:12px;color:var(--muted);font-weight:600}
+.head{position:sticky;top:0;z-index:5;display:flex;background:var(--paper);border-bottom:1px solid var(--ink)}
+.corner{position:sticky;left:0;z-index:6;width:var(--left);flex:0 0 var(--left);background:var(--paper);border-right:1px solid var(--hair);display:flex;align-items:flex-end;padding:0 16px 8px;font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute)}
 .scale{position:relative;flex:0 0 auto}
-.months{position:relative;height:var(--head-m);border-bottom:1px solid var(--line)}
-.month{position:absolute;top:0;height:100%;border-left:1px solid var(--line2);font-size:11px;font-weight:700;padding:4px 6px;white-space:nowrap;overflow:hidden;color:#334155}
-.ticks{position:relative;height:var(--head-t)}
+.months{position:relative;height:26px}
+.month{position:absolute;top:0;height:100%;border-left:1px solid var(--hair2);padding:7px 8px 0;font-size:10px;font-weight:700;letter-spacing:.14em;white-space:nowrap;overflow:hidden}
+.ticks{position:relative;height:28px}
 .ticks.hide{display:none}
-.tick{position:absolute;top:0;height:100%;font-size:10px;text-align:center;color:var(--muted);line-height:1.25;padding-top:3px;border-left:1px solid var(--line);overflow:hidden;white-space:nowrap}
-.tick.sat{color:#2563eb}.tick.sun{color:#dc2626}
-.tick.today{background:#fee2e2;color:#b91c1c;font-weight:700}
+.tick{position:absolute;top:0;height:100%;font-size:9px;text-align:center;color:var(--mute);line-height:1.3;padding-top:2px;overflow:hidden;white-space:nowrap;font-feature-settings:"tnum"}
+.tick.we{color:#b5b5b5}
+.tick.today{color:var(--paper);background:var(--ink);font-weight:700}
 .body{position:relative}
 .grid{position:absolute;top:0;bottom:0;pointer-events:none;z-index:0}
-.grid .we{position:absolute;top:0;bottom:0;background:#f3f6fa}
-.grid .wl{position:absolute;top:0;bottom:0;border-left:1px solid #eef1f5}
-.grid .ml{position:absolute;top:0;bottom:0;border-left:1px solid var(--line2)}
-.grid .td{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--late);opacity:.75}
-.row{display:flex;height:var(--row);border-bottom:1px solid var(--line);position:relative;z-index:1;cursor:pointer}
-.row:hover .cell-left,.row:active .cell-left{background:#f8fafc}
-.row:hover .cell-time{background:rgba(37,99,235,.04)}
-.cell-left{position:sticky;left:0;z-index:3;width:var(--left);flex:0 0 var(--left);background:#fff;border-right:1px solid var(--line2);padding:4px 10px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2px}
-.t-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-.t-name span{overflow:hidden;text-overflow:ellipsis}
-.t-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cell-time{position:relative;flex:0 0 auto}
-.bar{position:absolute;top:50%;transform:translateY(-50%);height:22px;border-radius:6px;background:var(--todo);color:#fff;font-size:11px;line-height:22px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.15)}
-.s-todo{background:var(--todo)}.s-doing{background:var(--doing)}.s-done{background:var(--done)}
-.s-late{background:var(--late)}.s-hold{background:var(--hold)}.s-other{background:var(--other)}
-.bar.overdue{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--late)}
-.blabel{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;color:#475569;white-space:nowrap;pointer-events:none}
-.nodate{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);white-space:nowrap}
-.row.group{height:var(--grow)}
-.row.group .cell-left{background:#eef2ff;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;font-size:13px;font-weight:700;color:#3730a3}
-.row.group .cell-time{background:rgba(238,242,255,.6)}
-.row.group .caret{display:inline-block;width:14px;transition:transform .15s}
-.row.group.collapsed .caret{transform:rotate(-90deg)}
-.row.group .cnt{font-weight:400;color:#6366f1;font-size:11px}
-.gbar{position:absolute;top:50%;height:8px;transform:translateY(-50%);background:#6366f1;border-radius:4px;opacity:.55}
-.empty,.errbox{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px}
-.errbox{color:#b91c1c}
-.errbox .btn{margin-top:12px}
-.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:50;align-items:center;justify-content:center;padding:16px}
-.overlay.open{display:flex}
-.login{background:#fff;border-radius:14px;width:100%;max-width:360px;padding:22px}
-.login h2{margin:0 0 6px;font-size:18px}
-.login p{margin:0 0 14px;font-size:13px;color:var(--muted)}
-.login input{width:100%;height:44px;margin-bottom:10px}
-.login .msg{color:#b91c1c;font-size:13px;min-height:18px;margin-bottom:8px}
-.login .primary{width:100%;height:44px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-.sheet-ov{align-items:flex-end;padding:0}
-@media (min-width:641px){ .sheet-ov{align-items:center;padding:16px} }
-.sheet{background:#fff;width:100%;max-width:560px;max-height:85dvh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom))}
-@media (min-width:641px){ .sheet{border-radius:14px} }
-.sheet .grab{width:40px;height:4px;border-radius:2px;background:#cbd5e1;margin:0 auto 12px}
-.sheet h3{margin:0 0 4px;font-size:17px}
-.sheet .badges{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
-.badge{font-size:11px;padding:3px 8px;border-radius:999px;color:#fff}
-.badge.warn{background:var(--late)}
-.kv{display:grid;grid-template-columns:96px 1fr;gap:8px 12px;font-size:14px}
-.kv dt{color:var(--muted);font-size:12px;padding-top:2px}
-.kv dd{margin:0;white-space:pre-wrap;word-break:break-word}
-.sheet .close{margin-top:16px;width:100%;height:42px}
-.loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.55);z-index:40}
-.loading.on{display:flex}
-.spin{width:36px;height:36px;border:4px solid #dbeafe;border-top-color:var(--primary);border-radius:50%;animation:sp 0.8s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
+.grid .we{position:absolute;top:0;bottom:0;background:var(--tint)}
+.grid .wl{position:absolute;top:0;bottom:0;border-left:1px solid #f0f0f0}
+.grid .ml{position:absolute;top:0;bottom:0;border-left:1px solid var(--hair2)}
+.grid .td{position:absolute;top:0;bottom:0;width:1px;background:var(--accent)}
+
+.row{display:flex;position:relative;z-index:1;cursor:pointer;border-bottom:1px solid var(--hair)}
+.row.l1{height:var(--h1);border-top:1px solid var(--ink);border-bottom-color:var(--hair2)}
+.row.l1:first-child{border-top:0}
+.row.l2{height:var(--h2)}
+.row.l3{height:var(--h3)}
+.cl{position:sticky;left:0;z-index:3;width:var(--left);flex:0 0 var(--left);background:var(--paper);border-right:1px solid var(--hair);display:flex;align-items:center;gap:8px;padding:0 14px 0 0;overflow:hidden}
+.row:hover .cl{background:var(--tint)}
+.row:hover .ct{background:rgba(0,0,0,.015)}
+.ind{flex:0 0 auto}
+.l1 .ind{width:14px}.l2 .ind{width:28px}.l3 .ind{width:42px}
+@media (max-width:640px){ .l1 .ind{width:10px}.l2 .ind{width:18px}.l3 .ind{width:26px} }
+.tg{flex:0 0 14px;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:9px;transition:transform .2s;color:var(--ink)}
+.collapsed .tg{transform:rotate(-90deg)}
+.tg.none{visibility:hidden}
+.txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l1 .nm{font-size:14px;font-weight:900;letter-spacing:.02em}
+.l2 .nm{font-size:13px;font-weight:700;color:var(--ink2)}
+.l3 .nm{font-size:12.5px;font-weight:500;color:var(--ink2)}
+.mt{font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;font-feature-settings:"tnum"}
+.mt b{font-weight:600;color:var(--ink2)}
+.flag{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.ct{position:relative;flex:0 0 auto}
+.br{position:absolute;top:50%;transform:translateY(-50%);min-width:3px}
+.l1 .br{height:14px;background:var(--lv1)}
+.l2 .br{height:10px;background:var(--lv2)}
+.l3 .br{height:8px;background:var(--lv3)}
+.br.done{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
+.br.over::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--accent)}
+.br .pg{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.28)}
+.bl{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;pointer-events:none;font-size:10.5px;color:var(--ink2);letter-spacing:.02em}
+.l1 .bl{font-weight:800;color:var(--ink)}
+.l2 .bl{font-weight:600}
+.l3 .bl{color:var(--mute)}
+.nodate{position:absolute;top:50%;transform:translateY(-50%);font-size:10px;color:var(--mute);letter-spacing:.1em}
+
+.empty,.errbox{padding:64px 20px;text-align:center;font-size:13px;color:var(--mute);letter-spacing:.06em}
+.errbox{color:var(--accent)}
+
+/* ===== Overlays ===== */
+.ov{position:fixed;inset:0;display:none;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+.ov.open{display:flex}
+.login{width:100%;max-width:380px;border-top:3px solid var(--ink);padding-top:22px}
+.login h2{margin:8px 0 22px;font-size:30px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+.login input{width:100%;height:46px;border:0;border-bottom:1px solid var(--ink);font-size:16px;outline:none;background:transparent;padding:0 2px}
+.login .msg{min-height:20px;font-size:12px;color:var(--accent);margin:10px 0}
+.pbtn{width:100%;height:50px;border:0;background:var(--ink);color:var(--paper);font-size:12px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;transition:opacity .2s}
+.pbtn:hover{opacity:.82}
+
+.dov{align-items:flex-end;padding:0;background:rgba(10,10,10,.35);backdrop-filter:none;-webkit-backdrop-filter:none}
+@media (min-width:641px){ .dov{align-items:stretch;justify-content:flex-end} }
+.dt{background:var(--paper);width:100%;max-height:86dvh;overflow:auto;padding:22px 22px calc(24px + env(safe-area-inset-bottom));border-top:3px solid var(--ink);animation:up .25s ease}
+@media (min-width:641px){ .dt{max-width:440px;max-height:none;height:100%;border-top:0;border-left:3px solid var(--ink);animation:sl .25s ease} }
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+@keyframes sl{from{transform:translateX(30px);opacity:0}}
+.dt h3{margin:8px 0 14px;font-size:24px;font-weight:900;line-height:1.2}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.tag{font-size:10px;font-weight:600;letter-spacing:.14em;padding:4px 8px;border:1px solid var(--ink)}
+.tag.inv{background:var(--ink);color:var(--paper)}
+.tag.al{border-color:var(--accent);color:var(--accent)}
+.kv{margin:0;border-top:1px solid var(--ink)}
+.kv div{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair)}
+.kv dt{font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);padding-top:3px}
+.kv dd{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.kv .auto{font-size:9px;letter-spacing:.14em;color:var(--mute);margin-left:6px}
+.dt .pbtn{margin-top:22px}
+
+.loading{position:fixed;left:0;right:0;top:0;height:2px;z-index:60;display:none;overflow:hidden}
+.loading.on{display:block}
+.loading i{position:absolute;top:0;bottom:0;width:30%;background:var(--ink);animation:ld 1s ease-in-out infinite}
+@keyframes ld{from{left:-30%}to{left:100%}}
 </style>
 </head>
 <body>
+<div class="loading" id="loading"><i></i></div>
 <div class="app">
-  <header class="top">
-    <div class="ttl">
-      <h1 id="title">ガントチャート</h1>
-      <div class="sub" id="updated">—</div>
+  <header class="hd">
+    <div class="brand">
+      <h1 id="title">—</h1>
+      <div class="upd" id="updated">&nbsp;</div>
     </div>
-    <button class="ibtn" id="btnReload" title="最新を取得">⟳</button>
-    <button class="ibtn" id="btnLogout" title="ログアウト">⎋</button>
+    <div class="stats" id="stats"></div>
+    <nav>
+      <button class="txtbtn" id="btnReload">Reload</button>
+      <button class="txtbtn" id="btnLogout">Logout</button>
+    </nav>
   </header>
 
-  <div class="toolbar">
-    <div class="seg" id="zoomSeg">
-      <button data-z="day">日</button><button data-z="week">週</button><button data-z="month">月</button>
+  <div class="tb">
+    <div class="grp" id="zoom">
+      <button class="txtbtn" data-z="day">Day</button>
+      <button class="txtbtn" data-z="week">Week</button>
+      <button class="txtbtn" data-z="month">Month</button>
     </div>
-    <button class="btn" id="btnToday">今日</button>
-    <button class="btn" id="btnFilter">絞り込み</button>
-    <input type="search" id="q" placeholder="検索（タスク・オーナー等）">
+    <span class="sep"></span>
+    <div class="grp">
+      <button class="txtbtn" id="btnToday">Today</button>
+      <button class="txtbtn" id="btnL1" title="LV1のみ表示">LV1</button>
+      <button class="txtbtn" id="btnL2" title="LV2まで表示">LV2</button>
+      <button class="txtbtn" id="btnL3" title="すべて展開">All</button>
+      <button class="txtbtn" id="btnFilter">Filter</button>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--lv1)"></i>LV1</span>
+      <span><i style="background:var(--lv2)"></i>LV2</span>
+      <span><i style="background:var(--lv3)"></i>LV3</span>
+    </div>
+    <input type="search" class="search" id="q" placeholder="Search">
     <div class="filters" id="filters">
-      <label>グループ
-        <select id="groupBy">
-          <option value="none">なし</option>
-          <option value="event">Event</option>
-          <option value="category">Category</option>
-          <option value="owner">タスクオーナー</option>
-          <option value="status">Status</option>
-        </select>
-      </label>
-      <label>並び順
-        <select id="sortBy">
-          <option value="wbs">WBS順</option>
-          <option value="start">開始日順</option>
-          <option value="end">終了日順</option>
-        </select>
-      </label>
       <label>Event<select id="fEvent"></select></label>
       <label>Category<select id="fCategory"></select></label>
-      <label>タスクオーナー<select id="fOwner"></select></label>
+      <label>Owner<select id="fOwner"></select></label>
       <label>Status<select id="fStatus"></select></label>
       <label class="chk"><input type="checkbox" id="hideDone">完了を隠す</label>
       <label class="chk"><input type="checkbox" id="onlyOverdue">期限超過のみ</label>
-      <button class="btn" id="btnClear">条件クリア</button>
+      <button class="txtbtn" id="btnClear">Clear</button>
     </div>
   </div>
 
-  <div class="chips" id="chips"></div>
-
-  <div class="scroller" id="scroller">
-    <div class="chart" id="chart"></div>
-  </div>
+  <div class="scroller" id="scroller"><div class="chart" id="chart"></div></div>
 </div>
 
-<div class="overlay" id="loginOv">
-  <form class="login" id="loginForm" autocomplete="on">
-    <h2>パスワード</h2>
-    <p>閲覧用パスワードを入力してください。次回以降は自動でログインします。</p>
-    <input type="password" id="pw" autocomplete="current-password" placeholder="パスワード" required>
+<div class="ov" id="loginOv">
+  <form class="login" id="loginForm">
+    <div class="eyebrow">Restricted Access</div>
+    <h2>Enter<br>Password.</h2>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Password" required>
     <div class="msg" id="loginMsg"></div>
-    <button class="primary" type="submit">表示する</button>
+    <button class="pbtn" type="submit">View Timeline</button>
   </form>
 </div>
 
-<div class="overlay sheet-ov" id="detailOv">
-  <div class="sheet" id="detail"></div>
-</div>
-
-<div class="loading" id="loading"><div class="spin"></div></div>
+<div class="ov dov" id="detailOv"><div class="dt" id="detail"></div></div>
 
 <script>
-/* GASのURLから開く場合は空のままでOK。外部ホスティング時はウェブアプリURL(/exec)を設定 */
+/* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のまま */
 const API_URL = 'https://script.google.com/macros/s/AKfycbxz9LsWMF19uylm_T7s3-150QOUiMbcUg98UxoVwD9H8-zPWDxdypJplFYwXVIELGU3hA/exec';
-
-const PW_KEY = 'gantt_pw';
-const PREF_KEY = 'gantt_prefs';
+const PW_KEY = 'gantt_pw', PREF_KEY = 'gantt_prefs_v2';
 const DAY = 86400000;
-const ZOOMS = { day: 32, week: 12, month: 4 };
-const WD = ['日','月','火','水','木','金','土'];
-const STATUS = {
-  todo:  { label: '未着手', color: 'var(--todo)' },
-  doing: { label: '進行中', color: 'var(--doing)' },
-  done:  { label: '完了',   color: 'var(--done)' },
-  late:  { label: '遅延',   color: 'var(--late)' },
-  hold:  { label: '保留',   color: 'var(--hold)' },
-  other: { label: 'その他', color: 'var(--other)' },
-};
-
+const ZOOMS = { day: 28, week: 10, month: 3.5 };
+const WD = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const WDJ = ['日','月','火','水','木','金','土'];
+const ST_LABEL = { todo:'未着手', doing:'進行中', done:'完了', late:'遅延', hold:'保留', other:'—' };
+/* フィールド名 → スプレッドシートのヘッダー名（列名が変わったらここだけ直す） */
+const FIELDS = { wbs:'WBS', event:'Event', category:'Category', task:'タスク', owner:'タスクオーナー',
+  start:'開始日', end:'終了日', status:'Status', kpi:'KPI', note:'備考' };
+const EMPTY_FILTER = { event:'', category:'', owner:'', status:'', q:'', hideDone:false, onlyOverdue:false };
 const $ = (id) => document.getElementById(id);
-const state = {
-  tasks: [], meta: {},
-  zoom: window.innerWidth <= 640 ? 'week' : 'day',
-  groupBy: 'event', sortBy: 'wbs',
-  f: { event: '', category: '', owner: '', status: '', q: '', hideDone: false, onlyOverdue: false },
-  collapsed: new Set(),
-  scrollToToday: true,
-  range: null,
+const S = {
+  roots: [], all: [], leaves: [],
+  zoom: innerWidth <= 640 ? 'week' : 'day',
+  f: { ...EMPTY_FILTER },
+  collapsed: new Set(), toToday: true, range: null,
 };
 const TODAY = (() => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY; })();
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadPrefs();
-  bindUI();
+  loadPrefs(); bindUI();
   const pw = localStorage.getItem(PW_KEY);
-  if (pw) fetchData(pw); else showLogin();
+  pw ? fetchData(pw) : showLogin();
 });
 
+/* ================= API ================= */
 function callApi(password) {
   if (window.google && google.script && google.script.run) {
-    return new Promise((resolve, reject) =>
-      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getData(password));
+    return new Promise((ok, ng) => google.script.run.withSuccessHandler(ok).withFailureHandler(ng).getData(password));
   }
   if (!API_URL) return Promise.reject(new Error('API_URL が設定されていません'));
-  return fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ password }),
-    cache: 'no-store',
-    redirect: 'follow',
-  }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  return fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ password }), cache:'no-store', redirect:'follow' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
 }
-
+/* GASの行(ヘッダー名キー)をフロントのフィールド名に変換 */
+function toTasks(res) {
+  const headers = res.headers || [];
+  const missing = Object.values(FIELDS).filter((h) => !headers.includes(h));
+  if (missing.length) throw new Error('ヘッダーが見つかりません: ' + missing.join(', '));
+  return (res.rows || []).map((r) => {
+    const t = { row: r._row };
+    for (const k in FIELDS) t[k] = r[FIELDS[k]] || '';
+    return t;
+  });
+}
 async function fetchData(pw) {
   setLoading(true);
   try {
     const res = await callApi(pw);
     if (!res || !res.ok) {
-      if (res && (res.error === 'AUTH' || res.error === 'LOCKED')) {
-        localStorage.removeItem(PW_KEY);
-        showLogin(res.message);
-        return;
-      }
+      if (res && (res.error === 'AUTH' || res.error === 'LOCKED')) { localStorage.removeItem(PW_KEY); showLogin(res.message); return; }
       throw new Error((res && res.message) || 'データ取得に失敗しました');
     }
+    const tasks = toTasks(res);
     localStorage.setItem(PW_KEY, pw);
     hideLogin();
-    state.meta = res;
-    state.tasks = (res.tasks || []).map(normalize);
-    $('title').textContent = res.title || 'ガントチャート';
-    document.title = res.title || 'ガントチャート';
-    $('updated').textContent = '取得: ' + res.updatedAt + '　' + state.tasks.length + '件';
+    $('title').textContent = res.title || 'Timeline';
+    document.title = res.title || 'WBS Timeline';
+    buildTree(tasks);
+    $('updated').textContent = 'Updated ' + res.updatedAt;
     buildFilterOptions();
     render();
   } catch (e) {
+    hideLogin();
     showError(e.message || String(e));
-  } finally {
-    setLoading(false);
-  }
+  } finally { setLoading(false); }
 }
 
+/* ================= WBS Tree ================= */
+/* 'yyyy-MM-dd' / 'yyyy/M/d' / 'yyyy年M月d日' など → 日数（UTC）。解釈できなければ null */
 function toNum(s) {
-  if (!s) return null;
-  const [y, m, d] = s.split('-').map(Number);
-  return Date.UTC(y, m - 1, d) / DAY;
+  const m = String(s || '').match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m ? Date.UTC(m[1], m[2] - 1, m[3]) / DAY : null;
 }
-function fromNum(n) { return new Date(n * DAY); }
-function fmt(n, withYear) {
+const fromNum = (n) => new Date(n * DAY);
+function fmt(n, full) {
   if (n == null) return '';
-  const d = fromNum(n);
-  const md = (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
-  return withYear ? d.getUTCFullYear() + '/' + md + '(' + WD[d.getUTCDay()] + ')' : md;
+  const d = fromNum(n), md = (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
+  return full ? d.getUTCFullYear() + '/' + md + ' (' + WDJ[d.getUTCDay()] + ')' : md;
 }
 function statusKey(s) {
   const v = (s || '').toLowerCase();
-  if (!v || /未着手|未開始|todo|not ?started|open/.test(v)) return 'todo';
+  if (!v) return 'todo';
+  if (/未着手|未開始|未完了|todo|not ?started|incomplete|open/.test(v)) return 'todo'; // 「未完了」が「完了」に誤判定されないよう先に判定
   if (/完了|済|done|complete|closed/.test(v)) return 'done';
   if (/遅延|遅れ|delay|late|overdue/.test(v)) return 'late';
   if (/保留|中止|中断|hold|pending|cancel/.test(v)) return 'hold';
   if (/進行|着手|対応中|作業中|実施中|progress|doing|wip/.test(v)) return 'doing';
   return 'other';
 }
-function normalize(t, i) {
-  let s = toNum(t.start), e = toNum(t.end);
-  if (s == null && e != null) s = e;
-  if (e == null && s != null) e = s;
-  if (s != null && e < s) [s, e] = [e, s];
-  const sk = statusKey(t.status);
-  return Object.assign({}, t, { _i: i, s, e, sk, overdue: e != null && e < TODAY && sk !== 'done' });
+/* "1" → LV1, "1.2" → LV2, "1.2.3" → LV3（"1.0.0"や"1.2.0"のような末尾0は上位扱い） */
+function parseWbs(w) {
+  const segs = String(w || '').normalize('NFKC').trim().replace(/。/g, '.').split(/[.\-]/).map((s) => s.trim()).filter(Boolean);
+  while (segs.length > 1 && /^0+$/.test(segs[segs.length - 1])) segs.pop();
+  return segs.slice(0, 3);
 }
-function cmpWbs(a, b) {
-  if (!a && !b) return 0; if (!a) return 1; if (!b) return -1;
-  const pa = a.split(/[.\-_]/), pb = b.split(/[.\-_]/);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    if (pa[i] == null) return -1; if (pb[i] == null) return 1;
-    const na = Number(pa[i]), nb = Number(pb[i]);
-    const c = (!isNaN(na) && !isNaN(nb)) ? na - nb : pa[i].localeCompare(pb[i], 'ja');
-    if (c) return c;
-  }
-  return 0;
-}
-function getVisible() {
-  const f = state.f, q = f.q.trim().toLowerCase();
-  const list = state.tasks.filter((t) =>
-    (!f.event || t.event === f.event) &&
-    (!f.category || t.category === f.category) &&
-    (!f.owner || t.owner === f.owner) &&
-    (!f.status || t.status === f.status) &&
-    (!f.hideDone || t.sk !== 'done') &&
-    (!f.onlyOverdue || t.overdue) &&
-    (!q || [t.wbs, t.event, t.category, t.task, t.owner, t.status, t.kpi, t.note].join(' ').toLowerCase().includes(q))
-  );
-  const nz = (v) => (v == null ? Infinity : v);
-  const sorters = {
-    wbs: (a, b) => cmpWbs(a.wbs, b.wbs) || a.row - b.row,
-    start: (a, b) => nz(a.s) - nz(b.s) || cmpWbs(a.wbs, b.wbs),
-    end: (a, b) => nz(a.e) - nz(b.e) || cmpWbs(a.wbs, b.wbs),
+const lastSeg = (n) => n.segs[n.segs.length - 1];
+function buildTree(rows) {
+  const map = new Map(), all = [];
+  const add = (o) => { const n = { children: [], virtual: false, ...o }; all.push(n); map.set(n.key, n); return n; };
+  rows.forEach((r, i) => {
+    let segs = parseWbs(r.wbs);
+    if (!segs.length) segs = ['~', 'nowbs', 'r' + r.row];   // WBS未入力 → 「WBS未設定」配下のLV3
+    let key = segs.join('.');
+    if (map.has(key)) key += '#' + r.row;                   // WBS重複
+    add({ ...r, id: 'n' + i, key, segs, level: segs.length, ownS: toNum(r.start), ownE: toNum(r.end) });
+  });
+  // 親が無ければ仮ノードを生成（LV2名=Category、LV1名=Event）
+  const link = (n) => {
+    if (n.level === 1) return;
+    const ps = n.segs.slice(0, -1), pk = ps.join('.');
+    let p = map.get(pk);
+    if (!p) {
+      const noWbs = ps[0] === '~';
+      p = add({ id: 'v' + pk, key: pk, segs: ps, level: ps.length, virtual: true, ownS: null, ownE: null,
+        wbs: noWbs ? '' : pk,
+        task: noWbs ? 'WBS未設定' : (ps.length === 2 ? n.category || n.event : n.event) || 'WBS ' + pk,
+        event: n.event || '', category: ps.length === 2 ? n.category || '' : '', owner: '', status: '', kpi: '', note: '' });
+      link(p);
+    }
+    p.children.push(n);
   };
-  return list.sort(sorters[state.sortBy]);
+  [...all].forEach(link);
+  const roots = all.filter((n) => n.level === 1);
+  const sortRec = (arr) => {
+    arr.sort((a, b) => (a.segs[0] === '~') - (b.segs[0] === '~')
+      || lastSeg(a).localeCompare(lastSeg(b), 'ja', { numeric: true }) || (a.row || 0) - (b.row || 0));
+    arr.forEach((n) => sortRec(n.children));
+  };
+  sortRec(roots);
+  // ロールアップ：自分の値があればそれ、無ければ子の最小〜最大
+  const leaves = [];
+  const roll = (n) => {
+    n.children.forEach(roll);
+    const kids = n.children.filter((c) => c.s != null);
+    const cs = kids.length ? Math.min(...kids.map((c) => c.s)) : null;
+    const ce = kids.length ? Math.max(...kids.map((c) => c.e)) : null;
+    n.s = n.ownS != null ? n.ownS : cs;
+    n.e = n.ownE != null ? n.ownE : ce;
+    n.autoS = n.ownS == null && cs != null; n.autoE = n.ownE == null && ce != null;
+    if (n.s == null) n.s = n.e;
+    if (n.e == null) n.e = n.s;
+    if (n.s != null && n.e < n.s) [n.s, n.e] = [n.e, n.s];
+    if (!n.children.length) {
+      n.sk = statusKey(n.status); n.total = 1; n.done = n.sk === 'done' ? 1 : 0; leaves.push(n);
+    } else {
+      n.total = n.children.reduce((a, c) => a + c.total, 0);
+      n.done = n.children.reduce((a, c) => a + c.done, 0);
+      n.sk = n.status ? statusKey(n.status)
+        : n.done === n.total ? 'done' : n.children.some((c) => c.sk !== 'todo') ? 'doing' : 'todo';
+    }
+    n.overdue = n.e != null && n.e < TODAY && n.sk !== 'done';
+  };
+  roots.forEach(roll);
+  S.roots = roots; S.all = all; S.leaves = leaves;
 }
 
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ================= Filter ================= */
+function filtering() { const f = S.f; return !!(f.event || f.category || f.owner || f.status || f.q.trim() || f.hideDone || f.onlyOverdue); }
+function selfMatch(n) {
+  const f = S.f, q = f.q.trim().toLowerCase();
+  return (!f.event || n.event === f.event) && (!f.category || n.category === f.category) &&
+    (!f.owner || n.owner === f.owner) && (!f.status || n.status === f.status) &&
+    (!f.hideDone || n.sk !== 'done') && (!f.onlyOverdue || n.overdue) &&
+    (!q || [n.wbs, n.event, n.category, n.task, n.owner, n.status, n.kpi, n.note].join(' ').toLowerCase().includes(q));
 }
-function leftWidth() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left'), 10) || 150; }
+function flatten() {
+  const on = filtering(), out = [];
+  const vis = (n) => { const kid = n.children.map(vis).some(Boolean); return (n._v = kid || (!n.virtual && selfMatch(n))); };
+  if (on) S.roots.forEach(vis);
+  const walk = (n) => {
+    if (on && !n._v) return;
+    out.push(n);
+    if (!on && S.collapsed.has(n.key)) return;
+    n.children.forEach(walk);
+  };
+  S.roots.forEach(walk);
+  return out;
+}
 
+/* ================= Render ================= */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const leftW = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left'), 10) || 168;
 function calcRange() {
-  let min = Infinity, max = -Infinity;
-  state.tasks.forEach((t) => { if (t.s != null) { min = Math.min(min, t.s); max = Math.max(max, t.e); } });
-  min = Math.min(isFinite(min) ? min : TODAY, TODAY);
-  max = Math.max(isFinite(max) ? max : TODAY, TODAY);
-  const a = fromNum(min), b = fromNum(max);
+  let mn = TODAY, mx = TODAY;
+  S.roots.forEach((n) => { if (n.s != null) { mn = Math.min(mn, n.s); mx = Math.max(mx, n.e); } });
+  const a = fromNum(mn), b = fromNum(mx);
   const start = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / DAY;
-  const end = Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + 1, 0) / DAY;
+  const end = Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + 2, 0) / DAY; // 翌月末まで余白
   return { start, end, days: end - start + 1 };
 }
-
 function render() {
-  const scroller = $('scroller');
-  const keepTop = scroller.scrollTop, keepLeft = scroller.scrollLeft;
-  const dw = ZOOMS[state.zoom];
-  const R = state.range = calcRange();
-  const W = R.days * dw;
-  const L = leftWidth();
-  const list = getVisible();
-
-  renderChips(list);
-
+  const sc = $('scroller'), keepT = sc.scrollTop, keepL = sc.scrollLeft;
+  const dw = ZOOMS[S.zoom], R = S.range = calcRange(), W = Math.round(R.days * dw), L = leftW();
+  const list = flatten();
+  renderStats();
   let months = '';
   for (let d = fromNum(R.start); d.getTime() / DAY <= R.end; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
-    const s = d.getTime() / DAY;
-    const dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
-    const label = state.zoom === 'month' ? (d.getUTCMonth() + 1) + '月' + (d.getUTCMonth() === 0 || s === R.start ? ' ' + d.getUTCFullYear() : '')
-                                         : d.getUTCFullYear() + '年' + (d.getUTCMonth() + 1) + '月';
-    months += `<div class="month" style="left:${(s - R.start) * dw}px;width:${dim * dw}px">${label}</div>`;
+    const s = d.getTime() / DAY, dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    const m = d.getUTCMonth() + 1, y = d.getUTCFullYear();
+    const lb = S.zoom === 'month' ? (m === 1 || s === R.start ? y + '.' : '') + String(m).padStart(2, '0') : y + '.' + String(m).padStart(2, '0');
+    months += `<div class="month" style="left:${(s - R.start) * dw}px;width:${dim * dw}px">${lb}</div>`;
   }
-
   let ticks = '', grid = '';
   for (let n = R.start; n <= R.end; n++) {
     const d = fromNum(n), wd = d.getUTCDay(), x = (n - R.start) * dw;
     if (d.getUTCDate() === 1) grid += `<div class="ml" style="left:${x}px"></div>`;
-    if ((wd === 0 || wd === 6) && state.zoom !== 'month') grid += `<div class="we" style="left:${x}px;width:${dw}px"></div>`;
-    if (state.zoom === 'day') {
+    if (S.zoom === 'day') {
+      if (wd === 0 || wd === 6) grid += `<div class="we" style="left:${x}px;width:${dw}px"></div>`;
+      ticks += `<div class="tick${wd === 0 || wd === 6 ? ' we' : ''}${n === TODAY ? ' today' : ''}" style="left:${x}px;width:${dw}px">${d.getUTCDate()}<br>${WD[wd].slice(0, 2)}</div>`;
+    } else if (S.zoom === 'week' && wd === 1) {
       grid += `<div class="wl" style="left:${x}px"></div>`;
-      const cls = (wd === 6 ? ' sat' : wd === 0 ? ' sun' : '') + (n === TODAY ? ' today' : '');
-      ticks += `<div class="tick${cls}" style="left:${x}px;width:${dw}px">${d.getUTCDate()}<br>${WD[wd]}</div>`;
-    } else if (state.zoom === 'week' && wd === 1) {
-      grid += `<div class="wl" style="left:${x}px"></div>`;
-      ticks += `<div class="tick" style="left:${x}px;width:${7 * dw}px">${fmt(n)}</div>`;
+      ticks += `<div class="tick" style="left:${x + 4}px;width:${7 * dw}px;text-align:left;padding-top:8px">${fmt(n)}</div>`;
     }
   }
   grid += `<div class="td" style="left:${(TODAY - R.start) * dw + dw / 2}px"></div>`;
-
-  let rows = '';
-  if (!list.length) {
-    rows = `<div class="empty" style="position:sticky;left:0;width:min(100vw,${L + W}px)">該当するタスクがありません</div>`;
-  } else if (state.groupBy === 'none') {
-    rows = list.map((t) => taskRow(t, R, dw, W)).join('');
-  } else {
-    const groups = new Map();
-    list.forEach((t) => {
-      const k = t[state.groupBy] || '(未設定)';
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(t);
-    });
-    groups.forEach((arr, k) => {
-      const gid = state.groupBy + ':' + k;
-      const col = state.collapsed.has(gid);
-      const ss = arr.filter((t) => t.s != null);
-      let gbar = '';
-      if (ss.length) {
-        const gs = Math.min(...ss.map((t) => t.s)), ge = Math.max(...ss.map((t) => t.e));
-        gbar = `<div class="gbar" style="left:${(gs - R.start) * dw}px;width:${Math.max((ge - gs + 1) * dw, 6)}px"></div>`;
-      }
-      const done = arr.filter((t) => t.sk === 'done').length;
-      rows += `<div class="row group${col ? ' collapsed' : ''}" data-g="${esc(gid)}">
-        <div class="cell-left"><span class="caret">▼</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span><span class="cnt">${done}/${arr.length}</span></div>
-        <div class="cell-time" style="width:${W}px">${gbar}</div></div>`;
-      if (!col) rows += arr.map((t) => taskRow(t, R, dw, W)).join('');
-    });
-  }
-
+  const rows = list.length ? list.map((n) => rowHtml(n, R, dw, W)).join('')
+    : `<div class="empty" style="position:sticky;left:0;width:min(100vw,${L + W}px)">NO TASKS FOUND</div>`;
   $('chart').style.width = (L + W) + 'px';
   $('chart').innerHTML = `
-    <div class="head">
-      <div class="corner">タスク</div>
-      <div class="scale" style="width:${W}px">
-        <div class="months">${months}</div>
-        <div class="ticks${state.zoom === 'month' ? ' hide' : ''}">${ticks}</div>
-      </div>
-    </div>
-    <div class="body">
-      <div class="grid" style="left:${L}px;width:${W}px">${grid}</div>
-      ${rows}
-    </div>`;
-
-  if (state.scrollToToday) {
-    state.scrollToToday = false;
-    goToday();
+    <div class="head"><div class="corner">WBS / TASK</div>
+      <div class="scale" style="width:${W}px"><div class="months">${months}</div>
+      <div class="ticks${S.zoom === 'month' ? ' hide' : ''}">${ticks}</div></div></div>
+    <div class="body"><div class="grid" style="left:${L}px;width:${W}px">${grid}</div>${rows}</div>`;
+  if (S.toToday) { S.toToday = false; goToday(); } else { sc.scrollTop = keepT; sc.scrollLeft = keepL; }
+}
+function rowHtml(n, R, dw, W) {
+  const hasKids = n.children.length > 0;
+  const col = !filtering() && S.collapsed.has(n.key);
+  const period = n.s != null ? fmt(n.s) + ' – ' + fmt(n.e) : '日付未設定';
+  const wbs = n.wbs && `<b>${esc(n.wbs)}</b>`;
+  const meta = (n.level === 3 || !hasKids ? [wbs, esc(n.owner), period, esc(n.status)] : [wbs, period, n.done + '/' + n.total])
+    .filter(Boolean).join('  ·  ');
+  let bar;
+  if (n.s == null) {
+    bar = `<span class="nodate" style="left:${(TODAY - R.start) * dw + 10}px">NO DATE</span>`;
   } else {
-    scroller.scrollTop = keepTop;
-    scroller.scrollLeft = keepLeft;
+    const x = (n.s - R.start) * dw, w = Math.max((n.e - n.s + 1) * dw, 3);
+    const pg = hasKids && n.total ? `<span class="pg" style="width:${(n.done / n.total) * 100}%"></span>` : '';
+    bar = `<div class="br${n.sk === 'done' ? ' done' : ''}${n.overdue ? ' over' : ''}" style="left:${x}px;width:${w}px">${pg}</div>`
+        + `<span class="bl" style="left:${x + w + 8}px">${esc(n.task)}</span>`;
   }
-}
-
-function taskRow(t, R, dw, W) {
-  const st = STATUS[t.sk];
-  const meta = [t.wbs, t.owner, t.s != null ? fmt(t.s) + '–' + fmt(t.e) : '日付未設定'].filter(Boolean).join(' · ');
-  let time;
-  if (t.s == null) {
-    time = `<span class="nodate" style="left:${(TODAY - R.start) * dw + 8}px">日付未設定</span>`;
-  } else {
-    const x = (t.s - R.start) * dw, w = Math.max((t.e - t.s + 1) * dw, 6);
-    const inside = w >= 90;
-    time = `<div class="bar s-${t.sk}${t.overdue ? ' overdue' : ''}" style="left:${x}px;width:${w}px">${inside ? esc(t.task) : ''}</div>`
-         + (inside ? '' : `<span class="blabel" style="left:${x + w + 6}px">${esc(t.task)}</span>`);
-  }
-  return `<div class="row" data-i="${t._i}">
-    <div class="cell-left">
-      <div class="t-name"><i class="dot" style="background:${st.color}"></i><span>${esc(t.task || '(無題)')}</span>${t.overdue ? '<b style="color:var(--late);font-size:11px">!</b>' : ''}</div>
-      <div class="t-meta">${esc(meta)}</div>
+  return `<div class="row l${n.level}${col ? ' collapsed' : ''}" data-id="${esc(n.id)}" data-key="${esc(n.key)}">
+    <div class="cl"><span class="ind"></span>
+      <span class="tg${hasKids ? '' : ' none'}" data-tg="1">▼</span>
+      <div class="txt"><div class="nm">${esc(n.task || '(無題)')}</div><div class="mt">${meta}</div></div>
+      ${n.overdue ? '<span class="flag" title="期限超過"></span>' : ''}
     </div>
-    <div class="cell-time" style="width:${W}px">${time}</div></div>`;
+    <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
-
-function renderChips(list) {
-  const cnt = {}; let overdue = 0;
-  list.forEach((t) => { cnt[t.sk] = (cnt[t.sk] || 0) + 1; if (t.overdue) overdue++; });
-  let h = `<span class="chip"><b>${list.length}</b>件</span>`;
-  Object.keys(STATUS).forEach((k) => {
-    if (cnt[k]) h += `<span class="chip"><i class="dot" style="background:${STATUS[k].color}"></i>${STATUS[k].label} ${cnt[k]}</span>`;
-  });
-  if (overdue) h += `<span class="chip" style="background:#fee2e2;color:#b91c1c">期限超過 ${overdue}</span>`;
-  $('chips').innerHTML = h;
+function renderStats() {
+  const L = S.leaves, over = L.filter((n) => n.overdue).length;
+  $('stats').innerHTML = `
+    <div class="stat"><span class="n">${L.length}</span><span class="l">Tasks</span></div>
+    <div class="stat"><span class="n">${L.filter((n) => n.sk === 'doing').length}</span><span class="l">In Progress</span></div>
+    <div class="stat${over ? ' alert' : ''}"><span class="n">${over}</span><span class="l">Overdue</span></div>`;
 }
-
 function goToday() {
-  if (!state.range) return;
-  const sc = $('scroller');
-  const x = (TODAY - state.range.start) * ZOOMS[state.zoom];
-  const visible = sc.clientWidth - leftWidth();
-  sc.scrollLeft = Math.max(0, x - visible * 0.3);
+  if (!S.range) return;
+  const sc = $('scroller'), x = (TODAY - S.range.start) * ZOOMS[S.zoom];
+  sc.scrollLeft = Math.max(0, x - (sc.clientWidth - leftW()) * 0.25);
 }
 
-function openDetail(i) {
-  const t = state.tasks.find((x) => x._i === i);
-  if (!t) return;
-  const st = STATUS[t.sk];
-  const days = t.s != null ? (t.e - t.s + 1) + '日間' : '';
-  const remain = t.e != null && t.sk !== 'done'
-    ? (t.e >= TODAY ? '残り ' + (t.e - TODAY) + '日' : (TODAY - t.e) + '日超過') : '';
+/* ================= Detail ================= */
+function openDetail(id) {
+  const n = S.all.find((x) => x.id === id); if (!n) return;
+  const lvl = ['', 'LV1', 'LV2', 'LV3'][n.level];
+  const dur = n.s != null ? (n.e - n.s + 1) + '日間' : '';
+  const rem = n.e != null && n.sk !== 'done' ? (n.e >= TODAY ? '残り' + (n.e - TODAY) + '日' : (TODAY - n.e) + '日超過') : '';
+  const auto = '<span class="auto">AUTO</span>';
   const kv = [
-    ['WBS', t.wbs], ['Event', t.event], ['Category', t.category], ['タスクオーナー', t.owner],
-    ['開始日', fmt(t.s, true)], ['終了日', fmt(t.e, true)], ['期間', [days, remain].filter(Boolean).join(' / ')],
-    ['Status', t.status], ['KPI', t.kpi], ['備考', t.note],
+    ['WBS', esc(n.wbs || '—')], ['Event', esc(n.event || '—')], ['Category', esc(n.category || '—')],
+    ['Owner', esc(n.owner || '—')],
+    ['Start', n.s != null ? fmt(n.s, true) + (n.autoS ? auto : '') : '—'],
+    ['End', n.e != null ? fmt(n.e, true) + (n.autoE ? auto : '') : '—'],
+    ['Duration', [dur, rem].filter(Boolean).join(' / ') || '—'],
+    ['Status', esc(n.status || (n.children.length ? ST_LABEL[n.sk] + '（自動）' : '—'))],
   ];
+  if (n.children.length) kv.push(['Progress', n.done + ' / ' + n.total + '（' + Math.round(n.done / n.total * 100) + '%）']);
+  kv.push(['KPI', esc(n.kpi || '—')], ['Note', esc(n.note || '—')]);
   $('detail').innerHTML = `
-    <div class="grab"></div>
-    <h3>${esc(t.task || '(無題)')}</h3>
-    <div class="badges">
-      <span class="badge" style="background:${st.color}">${esc(t.status || st.label)}</span>
-      ${t.overdue ? '<span class="badge warn">期限超過</span>' : ''}
-    </div>
-    <dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v || '—')}</dd>`).join('')}</dl>
-    <button class="btn close" id="btnClose">閉じる</button>`;
+    <div class="eyebrow">${lvl}${n.virtual ? ' — Auto Generated' : ''}</div>
+    <h3>${esc(n.task || '(無題)')}</h3>
+    <div class="tags"><span class="tag inv">${lvl}</span><span class="tag">${esc(ST_LABEL[n.sk])}</span>${n.overdue ? '<span class="tag al">OVERDUE</span>' : ''}</div>
+    <dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <button class="pbtn" id="btnClose">Close</button>`;
   $('detailOv').classList.add('open');
   $('btnClose').onclick = closeDetail;
 }
-function closeDetail() { $('detailOv').classList.remove('open'); }
+const closeDetail = () => $('detailOv').classList.remove('open');
 
+/* ================= UI ================= */
 function buildFilterOptions() {
   const fill = (id, key) => {
-    const vals = [...new Set(state.tasks.map((t) => t[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
-    if (state.f[key] && !vals.includes(state.f[key])) state.f[key] = '';
-    $(id).innerHTML = '<option value="">すべて</option>' + vals.map((v) => `<option${v === state.f[key] ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    const vals = [...new Set(S.leaves.map((t) => t[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+    if (S.f[key] && !vals.includes(S.f[key])) S.f[key] = '';
+    $(id).innerHTML = '<option value="">All</option>' + vals.map((v) => `<option${v === S.f[key] ? ' selected' : ''}>${esc(v)}</option>`).join('');
   };
   fill('fEvent', 'event'); fill('fCategory', 'category'); fill('fOwner', 'owner'); fill('fStatus', 'status');
 }
-
+function setDepth(d) {
+  S.collapsed.clear();
+  S.all.forEach((n) => { if (n.children.length && n.level >= d) S.collapsed.add(n.key); });
+  savePrefs(); render();
+}
 function bindUI() {
   syncControls();
-  $('zoomSeg').addEventListener('click', (e) => {
-    const z = e.target.dataset.z; if (!z) return;
-    state.zoom = z; state.scrollToToday = true; savePrefs(); syncControls(); render();
-  });
+  $('zoom').addEventListener('click', (e) => { const z = e.target.dataset.z; if (!z) return; S.zoom = z; S.toToday = true; savePrefs(); syncControls(); render(); });
   $('btnToday').onclick = goToday;
+  $('btnL1').onclick = () => setDepth(1);
+  $('btnL2').onclick = () => setDepth(2);
+  $('btnL3').onclick = () => setDepth(9);
   $('btnFilter').onclick = () => { $('filters').classList.toggle('open'); $('btnFilter').classList.toggle('on'); };
-  $('groupBy').onchange = (e) => { state.groupBy = e.target.value; savePrefs(); render(); };
-  $('sortBy').onchange = (e) => { state.sortBy = e.target.value; savePrefs(); render(); };
-  [['fEvent', 'event'], ['fCategory', 'category'], ['fOwner', 'owner'], ['fStatus', 'status']].forEach(([id, k]) => {
-    $(id).onchange = (e) => { state.f[k] = e.target.value; render(); };
-  });
-  $('hideDone').onchange = (e) => { state.f.hideDone = e.target.checked; savePrefs(); render(); };
-  $('onlyOverdue').onchange = (e) => { state.f.onlyOverdue = e.target.checked; render(); };
-  let timer;
-  $('q').addEventListener('input', (e) => { clearTimeout(timer); timer = setTimeout(() => { state.f.q = e.target.value; render(); }, 200); });
-  $('btnClear').onclick = () => {
-    state.f = { event: '', category: '', owner: '', status: '', q: '', hideDone: false, onlyOverdue: false };
-    $('q').value = ''; syncControls(); buildFilterOptions(); savePrefs(); render();
-  };
+  [['fEvent','event'],['fCategory','category'],['fOwner','owner'],['fStatus','status']].forEach(([id, k]) => { $(id).onchange = (e) => { S.f[k] = e.target.value; render(); }; });
+  $('hideDone').onchange = (e) => { S.f.hideDone = e.target.checked; savePrefs(); render(); };
+  $('onlyOverdue').onchange = (e) => { S.f.onlyOverdue = e.target.checked; render(); };
+  let tm; $('q').addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { S.f.q = e.target.value; render(); }, 200); });
+  $('btnClear').onclick = () => { S.f = { ...EMPTY_FILTER }; $('q').value = ''; syncControls(); buildFilterOptions(); savePrefs(); render(); };
   $('chart').addEventListener('click', (e) => {
     const row = e.target.closest('.row'); if (!row) return;
-    if (row.dataset.g != null) {
-      const g = row.dataset.g;
-      state.collapsed.has(g) ? state.collapsed.delete(g) : state.collapsed.add(g);
-      render();
-    } else if (row.dataset.i != null) {
-      openDetail(Number(row.dataset.i));
+    const n = S.all.find((x) => x.id === row.dataset.id); if (!n) return;
+    // 親行(LV1/LV2)：左の名前欄タップ→開閉、右のバー領域タップ→詳細
+    if (n.children.length && e.target.closest('.cl')) {
+      if (filtering()) return openDetail(n.id);
+      S.collapsed.has(n.key) ? S.collapsed.delete(n.key) : S.collapsed.add(n.key);
+      savePrefs(); render(); return;
     }
+    openDetail(n.id);
   });
   $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
   $('btnReload').onclick = () => { const pw = localStorage.getItem(PW_KEY); pw ? fetchData(pw) : showLogin(); };
   $('btnLogout').onclick = () => {
     if (!confirm('保存されたパスワードを削除してログアウトしますか？')) return;
-    localStorage.removeItem(PW_KEY);
-    state.tasks = []; $('chart').innerHTML = ''; $('chips').innerHTML = ''; $('updated').textContent = '—';
-    showLogin();
+    localStorage.removeItem(PW_KEY); S.roots = []; S.all = []; S.leaves = [];
+    $('chart').innerHTML = ''; $('stats').innerHTML = ''; showLogin();
   };
-  $('loginForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const pw = $('pw').value;
-    if (!pw) return;
-    $('loginMsg').textContent = '';
-    fetchData(pw);
-  });
-  let lastL = leftWidth(), rt;
-  window.addEventListener('resize', () => {
-    clearTimeout(rt);
-    rt = setTimeout(() => { const l = leftWidth(); if (l !== lastL && state.tasks.length) { lastL = l; render(); } }, 150);
-  });
+  $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); const pw = $('pw').value; if (pw) { $('loginMsg').textContent = ''; fetchData(pw); } });
+  let lastL = leftW(), rt;
+  addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const l = leftW(); if (l !== lastL && S.all.length) { lastL = l; render(); } }, 150); });
 }
-
 function syncControls() {
-  document.querySelectorAll('#zoomSeg button').forEach((b) => b.classList.toggle('on', b.dataset.z === state.zoom));
-  $('groupBy').value = state.groupBy;
-  $('sortBy').value = state.sortBy;
-  $('hideDone').checked = state.f.hideDone;
-  $('onlyOverdue').checked = state.f.onlyOverdue;
+  document.querySelectorAll('#zoom button').forEach((b) => b.classList.toggle('on', b.dataset.z === S.zoom));
+  $('hideDone').checked = S.f.hideDone; $('onlyOverdue').checked = S.f.onlyOverdue;
 }
 function loadPrefs() {
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
-    if (p.zoom in ZOOMS) state.zoom = p.zoom;
-    if (p.groupBy) state.groupBy = p.groupBy;
-    if (p.sortBy) state.sortBy = p.sortBy;
-    state.f.hideDone = !!p.hideDone;
+    if (p.zoom in ZOOMS) S.zoom = p.zoom;
+    S.f.hideDone = !!p.hideDone;
+    if (Array.isArray(p.collapsed)) S.collapsed = new Set(p.collapsed);
   } catch (_) {}
 }
-function savePrefs() {
-  localStorage.setItem(PREF_KEY, JSON.stringify({ zoom: state.zoom, groupBy: state.groupBy, sortBy: state.sortBy, hideDone: state.f.hideDone }));
-}
-function showLogin(msg) {
-  $('loginMsg').textContent = msg || '';
-  $('pw').value = '';
-  $('loginOv').classList.add('open');
-  setTimeout(() => $('pw').focus(), 50);
-}
-function hideLogin() { $('loginOv').classList.remove('open'); }
-function setLoading(on) { $('loading').classList.toggle('on', on); }
+function savePrefs() { localStorage.setItem(PREF_KEY, JSON.stringify({ zoom: S.zoom, hideDone: S.f.hideDone, collapsed: [...S.collapsed] })); }
+function showLogin(msg) { $('loginMsg').textContent = msg || ''; $('pw').value = ''; $('loginOv').classList.add('open'); setTimeout(() => $('pw').focus(), 50); }
+const hideLogin = () => $('loginOv').classList.remove('open');
+const setLoading = (on) => $('loading').classList.toggle('on', on);
 function showError(msg) {
   $('chart').style.width = '100%';
-  $('chart').innerHTML = `<div class="errbox">⚠ ${esc(msg)}<br><button class="btn" id="btnRetry">再試行</button></div>`;
+  $('chart').innerHTML = `<div class="errbox">ERROR — ${esc(msg)}<br><br><button class="txtbtn" id="btnRetry">Retry</button></div>`;
   $('btnRetry').onclick = () => $('btnReload').click();
 }
 </script>
