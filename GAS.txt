@@ -1,13 +1,11 @@
 /**
- * WBSガントチャート用 GAS
+ * WBSガントチャート用 GAS（汎用版）
  * スクリプトプロパティ：SHEET_ID（必須） / PASSWORD（必須） / SHEET_NAME（任意）
+ *
+ * シートの1行目をヘッダーとして、全列を「ヘッダー名 → 値」でそのまま返すだけ。
+ * 列の増減・名称変更・フロントの表示仕様の変更では、このファイルの修正は不要です
+ * （列名とフィールドの対応は index.html 側の FIELDS で管理）。
  */
-const HEADER_MAP = {
-  'WBS': 'wbs', 'Event': 'event', 'Category': 'category', 'タスク': 'task',
-  'タスクオーナー': 'owner', '開始日': 'start', '終了日': 'end',
-  'Status': 'status', 'KPI': 'kpi', '備考': 'note',
-};
-const DATE_KEYS = ['start', 'end'];
 const MAX_FAILS = 20;
 const LOCK_SECONDS = 600;
 
@@ -20,25 +18,21 @@ function doGet() {
 
 function doPost(e) {
   let body = {};
-  try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (_) {}
-  return ContentService.createTextOutput(JSON.stringify(handle_(body.password)))
+  try { body = JSON.parse(e.postData.contents); } catch (_) {}
+  return ContentService.createTextOutput(JSON.stringify(getData(body.password)))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getData(password) { return handle_(password); }
-
-function handle_(password) {
+/** google.script.run / doPost 共通の入口。常に { ok, ... } を返す */
+function getData(password) {
   try {
-    const auth = checkPassword_(password);
-    if (auth !== true) return auth;
-    const data = readSheet_();
-    data.ok = true;
-    return data;
+    return checkPassword_(password) || Object.assign({ ok: true }, readSheet_());
   } catch (err) {
     return { ok: false, error: 'SERVER', message: String((err && err.message) || err) };
   }
 }
 
+/** OKなら null、NGなら エラー情報オブジェクトを返す */
 function checkPassword_(password) {
   const expected = PropertiesService.getScriptProperties().getProperty('PASSWORD');
   if (!expected) throw new Error('スクリプトプロパティ PASSWORD が未設定です');
@@ -47,7 +41,7 @@ function checkPassword_(password) {
   if (fails >= MAX_FAILS) {
     return { ok: false, error: 'LOCKED', message: '試行回数が多すぎます。しばらくしてから再度お試しください' };
   }
-  if (typeof password === 'string' && password.length > 0 && password === expected) return true;
+  if (password && password === expected) return null;
   cache.put('auth_fails', String(fails + 1), LOCK_SECONDS);
   Utilities.sleep(800);
   return { ok: false, error: 'AUTH', message: 'パスワードが違います' };
@@ -61,50 +55,31 @@ function readSheet_() {
   const sheetName = props.getProperty('SHEET_NAME');
   const sh = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
   if (!sh) throw new Error('シートが見つかりません: ' + sheetName);
-
   const tz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone();
-  const base = {
-    title: ss.getName(), sheetName: sh.getName(),
-    updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'), tasks: [],
-  };
+
   const range = sh.getDataRange();
-  const values = range.getValues();
-  const displays = range.getDisplayValues();
-  if (values.length < 2) return base;
+  const values = range.getValues();          // 日付判定用
+  const displays = range.getDisplayValues(); // 表示どおりの文字列
+  const headers = displays[0].map(function (h) { return String(h).trim(); });
 
-  const header = displays[0].map(function (h) { return String(h).trim(); });
-  const idx = {}, missing = [];
-  Object.keys(HEADER_MAP).forEach(function (h) {
-    const i = header.indexOf(h);
-    if (i === -1) missing.push(h);
-    idx[HEADER_MAP[h]] = i;
-  });
-  if (missing.length) throw new Error('ヘッダーが見つかりません: ' + missing.join(', '));
-
+  const rows = [];
   for (let r = 1; r < values.length; r++) {
-    const row = values[r], disp = displays[r];
-    if (disp.every(function (v) { return String(v).trim() === ''; })) continue;
-    const t = { row: r + 1 };
-    Object.keys(idx).forEach(function (key) {
-      const i = idx[key];
-      t[key] = DATE_KEYS.indexOf(key) !== -1
-        ? toDateStr_(row[i], disp[i], tz)
-        : String(disp[i] == null ? '' : disp[i]).trim();
+    if (displays[r].every(function (v) { return String(v).trim() === ''; })) continue;
+    const row = { _row: r + 1 };
+    headers.forEach(function (h, c) {
+      if (!h) return;
+      const v = values[r][c];
+      row[h] = v instanceof Date && !isNaN(v.getTime())
+        ? Utilities.formatDate(v, tz, 'yyyy-MM-dd')
+        : String(displays[r][c]).trim();
     });
-    base.tasks.push(t);
+    rows.push(row);
   }
-  return base;
-}
-
-/** Date / 文字列（2026/4/1, 2026-04-01, 2026年4月1日 など）→ yyyy-MM-dd */
-function toDateStr_(value, display, tz) {
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return Utilities.formatDate(value, tz, 'yyyy-MM-dd');
-  }
-  const s = String(display || value || '').trim();
-  const m = s.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
-  if (m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
-  return '';
+  return {
+    title: ss.getName(), sheetName: sh.getName(),
+    updatedAt: Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'),
+    headers: headers, rows: rows,
+  };
 }
 
 function testRead() { Logger.log(JSON.stringify(readSheet_(), null, 2)); }
