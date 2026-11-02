@@ -13,6 +13,7 @@
   --ink:#0a0a0a; --ink2:#3a3a3a; --mute:#8a8a8a; --hair:#e6e6e6; --hair2:#cfcfcf; --paper:#ffffff; --tint:#f6f6f6;
   --lv1:#0a0a0a; --lv2:#7a7a7a; --lv3:#c9c9c9;
   --accent:#e4002b;
+  --key:#f5a700; --keybg:#fff5d9;   /* 重要工程（mark=1）のハイライト色 */
   --left:340px; --h1:56px; --h2:46px; --h3:40px;
   --font:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
 }
@@ -108,12 +109,21 @@ button{cursor:pointer}
 .l3 .nm{font-size:12.5px;font-weight:500;color:var(--ink2)}
 .mt{font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;font-feature-settings:"tnum"}
 .mt b{font-weight:600;color:var(--ink2)}
+.tbd{display:inline-block;padding:0 5px;background:var(--accent);color:var(--paper);font-weight:700;letter-spacing:.08em;line-height:1.5}
+.stat.tbdk .n{color:var(--paper);background:var(--accent);padding:2px 6px}
 .flag{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .ct{position:relative;flex:0 0 auto}
 .br{position:absolute;top:50%;transform:translateY(-50%);min-width:3px}
 .l1 .br{height:14px;background:var(--lv1)}
 .l2 .br{height:10px;background:var(--lv2)}
 .l3 .br{height:8px;background:var(--lv3)}
+.row.key .cl,.row.key:hover .cl{background:var(--keybg);box-shadow:inset 4px 0 0 var(--key)}
+.row.key .ct{background:rgba(245,167,0,.07)}
+.row.key .nm{font-weight:800;color:var(--ink)}
+.row.key .br{background:var(--key);box-shadow:0 0 0 2px rgba(245,167,0,.25)}
+.l3.key .br,.l2.key .br{height:12px}
+.row.key .bl{color:var(--ink);font-weight:800}
+.tag.key{background:var(--key);border-color:var(--key);color:var(--ink)}
 .br.done{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
 .br.over::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--accent)}
 .br .pg{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.28)}
@@ -190,14 +200,15 @@ button{cursor:pointer}
       <button class="txtbtn" id="btnFilter">Filter</button>
     </div>
     <div class="legend">
+      <span><i style="background:var(--key)"></i>KEY</span>
       <span><i style="background:var(--lv1)"></i>LV1</span>
       <span><i style="background:var(--lv2)"></i>LV2</span>
       <span><i style="background:var(--lv3)"></i>LV3</span>
     </div>
     <input type="search" class="search" id="q" placeholder="Search">
     <div class="filters" id="filters">
-      <label>Event<select id="fEvent"></select></label>
       <label>Category<select id="fCategory"></select></label>
+      <label>Task<select id="fTask"></select></label>
       <label>Owner<select id="fOwner"></select></label>
       <label>Status<select id="fStatus"></select></label>
       <label class="chk"><input type="checkbox" id="hideDone">完了を隠す</label>
@@ -223,17 +234,27 @@ button{cursor:pointer}
 
 <script>
 /* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のまま */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxz9LsWMF19uylm_T7s3-150QOUiMbcUg98UxoVwD9H8-zPWDxdypJplFYwXVIELGU3hA/exec';
-const PW_KEY = 'gantt_pw', PREF_KEY = 'gantt_prefs_v2';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwud8_PwyU2sPWfJNRoeuZDKX0S0jdS1tz0qxCnho0POgdhDsLidyGOgrJsddkg-zU8nw/exec';
+const PW_KEY = 'gantt_pw', PREF_KEY = 'gantt_prefs_v3';
 const DAY = 86400000;
 const ZOOMS = { day: 28, week: 10, month: 3.5 };
 const WD = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const WDJ = ['日','月','火','水','木','金','土'];
 const ST_LABEL = { todo:'未着手', doing:'進行中', done:'完了', late:'遅延', hold:'保留', other:'—' };
 /* フィールド名 → スプレッドシートのヘッダー名（列名が変わったらここだけ直す） */
-const FIELDS = { wbs:'WBS', event:'Event', category:'Category', task:'タスク', owner:'タスクオーナー',
-  start:'開始日', end:'終了日', status:'Status', kpi:'KPI', note:'備考' };
-const EMPTY_FILTER = { event:'', category:'', owner:'', status:'', q:'', hideDone:false, onlyOverdue:false };
+const FIELDS = { wbs:'WBS', mark:'mark', category:'Category', task:'タスク', subtask:'サブタスク',
+  owner:'タスクオーナー', start:'開始日', end:'終了日', status:'Status', kpi:'KPI', note:'備考' };
+/* 必須列（無ければエラー）。それ以外の列は無くても空として扱う */
+const REQUIRED = ['wbs', 'category', 'task', 'subtask', 'start', 'end'];
+/* 表示名：LV1=Category / LV2=タスク / LV3=サブタスク（空なら隣の列で補完） */
+const NAME_BY_LEVEL = { 1: ['category', 'subtask', 'task'], 2: ['task', 'subtask'], 3: ['subtask', 'task'] };
+/* mark列がこの値ならハイライト（全角・前後空白は吸収） */
+/* タスクオーナーが未定かどうか（TBD／全角・小文字も吸収） */
+const isTBD = (v) => String(v || '').normalize('NFKC').trim().toUpperCase() === 'TBD';
+/* 担当者表示：TBDなら赤地で強調 */
+const ownerHtml = (v) => isTBD(v) ? `<span class="tbd">${esc(v)}</span>` : esc(v);
+const isMarked = (v) => String(v || '').normalize('NFKC').trim() === '1';
+const EMPTY_FILTER = { category:'', task:'', owner:'', status:'', q:'', hideDone:false, onlyOverdue:false };
 const $ = (id) => document.getElementById(id);
 const S = {
   roots: [], all: [], leaves: [],
@@ -262,11 +283,16 @@ function callApi(password) {
 /* GASの行(ヘッダー名キー)をフロントのフィールド名に変換 */
 function toTasks(res) {
   const headers = res.headers || [];
-  const missing = Object.values(FIELDS).filter((h) => !headers.includes(h));
+  const missing = REQUIRED.map((k) => FIELDS[k]).filter((h) => !headers.includes(h));
   if (missing.length) throw new Error('ヘッダーが見つかりません: ' + missing.join(', '));
   return (res.rows || []).map((r) => {
     const t = { row: r._row };
     for (const k in FIELDS) t[k] = r[FIELDS[k]] || '';
+    t.key1 = isMarked(t.mark);
+    // 備考の「Sub: 〇〇」をサブ担当として分離（残りは備考に残す）
+    const m = t.note.match(/Sub\s*[:：]\s*([^/／\n]+)/i);
+    t.sub = m ? m[1].trim() : '';
+    t.note = m ? t.note.replace(m[0], '').replace(/^[\s/／]+|[\s/／]+$/g, '') : t.note;
     return t;
   });
 }
@@ -324,7 +350,11 @@ function parseWbs(w) {
 const lastSeg = (n) => n.segs[n.segs.length - 1];
 function buildTree(rows) {
   const map = new Map(), all = [];
-  const add = (o) => { const n = { children: [], virtual: false, ...o }; all.push(n); map.set(n.key, n); return n; };
+  const add = (o) => {
+    const n = { children: [], virtual: false, ...o };
+    if (!n.name) n.name = (NAME_BY_LEVEL[n.level] || NAME_BY_LEVEL[3]).map((k) => n[k]).find(Boolean) || '';
+    all.push(n); map.set(n.key, n); return n;
+  };
   rows.forEach((r, i) => {
     let segs = parseWbs(r.wbs);
     if (!segs.length) segs = ['~', 'nowbs', 'r' + r.row];   // WBS未入力 → 「WBS未設定」配下のLV3
@@ -332,7 +362,7 @@ function buildTree(rows) {
     if (map.has(key)) key += '#' + r.row;                   // WBS重複
     add({ ...r, id: 'n' + i, key, segs, level: segs.length, ownS: toNum(r.start), ownE: toNum(r.end) });
   });
-  // 親が無ければ仮ノードを生成（LV2名=Category、LV1名=Event）
+  // 親が無ければ仮ノードを生成（LV2名=タスク、LV1名=Category）
   const link = (n) => {
     if (n.level === 1) return;
     const ps = n.segs.slice(0, -1), pk = ps.join('.');
@@ -341,8 +371,9 @@ function buildTree(rows) {
       const noWbs = ps[0] === '~';
       p = add({ id: 'v' + pk, key: pk, segs: ps, level: ps.length, virtual: true, ownS: null, ownE: null,
         wbs: noWbs ? '' : pk,
-        task: noWbs ? 'WBS未設定' : (ps.length === 2 ? n.category || n.event : n.event) || 'WBS ' + pk,
-        event: n.event || '', category: ps.length === 2 ? n.category || '' : '', owner: '', status: '', kpi: '', note: '' });
+        name: noWbs ? 'WBS未設定' : (ps.length === 2 ? n.task : n.category) || 'WBS ' + pk,
+        category: n.category || '', task: ps.length === 2 ? n.task || '' : '', subtask: '', key1: false,
+        owner: '', sub: '', status: '', kpi: '', note: '' });
       link(p);
     }
     p.children.push(n);
@@ -383,13 +414,13 @@ function buildTree(rows) {
 }
 
 /* ================= Filter ================= */
-function filtering() { const f = S.f; return !!(f.event || f.category || f.owner || f.status || f.q.trim() || f.hideDone || f.onlyOverdue); }
+function filtering() { const f = S.f; return !!(f.task || f.category || f.owner || f.status || f.q.trim() || f.hideDone || f.onlyOverdue); }
 function selfMatch(n) {
   const f = S.f, q = f.q.trim().toLowerCase();
-  return (!f.event || n.event === f.event) && (!f.category || n.category === f.category) &&
-    (!f.owner || n.owner === f.owner) && (!f.status || n.status === f.status) &&
+  return (!f.category || n.category === f.category) && (!f.task || n.task === f.task) &&
+    (!f.owner || n.owner === f.owner || n.sub === f.owner) && (!f.status || n.status === f.status) &&
     (!f.hideDone || n.sk !== 'done') && (!f.onlyOverdue || n.overdue) &&
-    (!q || [n.wbs, n.event, n.category, n.task, n.owner, n.status, n.kpi, n.note].join(' ').toLowerCase().includes(q));
+    (!q || [n.wbs, n.category, n.task, n.subtask, n.owner, n.sub, n.status, n.kpi, n.note].join(' ').toLowerCase().includes(q));
 }
 function flatten() {
   const on = filtering(), out = [];
@@ -456,7 +487,7 @@ function rowHtml(n, R, dw, W) {
   const col = !filtering() && S.collapsed.has(n.key);
   const period = n.s != null ? fmt(n.s) + ' – ' + fmt(n.e) : '日付未設定';
   const wbs = n.wbs && `<b>${esc(n.wbs)}</b>`;
-  const meta = (n.level === 3 || !hasKids ? [wbs, esc(n.owner), period, esc(n.status)] : [wbs, period, n.done + '/' + n.total])
+  const meta = (n.level === 3 || !hasKids ? [wbs, [n.owner, n.sub].filter(Boolean).map(ownerHtml).join(' / '), period, esc(n.status)] : [wbs, period, n.done + '/' + n.total])
     .filter(Boolean).join('  ·  ');
   let bar;
   if (n.s == null) {
@@ -465,22 +496,23 @@ function rowHtml(n, R, dw, W) {
     const x = (n.s - R.start) * dw, w = Math.max((n.e - n.s + 1) * dw, 3);
     const pg = hasKids && n.total ? `<span class="pg" style="width:${(n.done / n.total) * 100}%"></span>` : '';
     bar = `<div class="br${n.sk === 'done' ? ' done' : ''}${n.overdue ? ' over' : ''}" style="left:${x}px;width:${w}px">${pg}</div>`
-        + `<span class="bl" style="left:${x + w + 8}px">${esc(n.task)}</span>`;
+        + `<span class="bl" style="left:${x + w + 8}px">${esc(n.name)}</span>`;
   }
-  return `<div class="row l${n.level}${col ? ' collapsed' : ''}" data-id="${esc(n.id)}" data-key="${esc(n.key)}">
+  return `<div class="row l${n.level}${n.key1 ? ' key' : ''}${col ? ' collapsed' : ''}" data-id="${esc(n.id)}" data-key="${esc(n.key)}">
     <div class="cl"><span class="ind"></span>
       <span class="tg${hasKids ? '' : ' none'}" data-tg="1">▼</span>
-      <div class="txt"><div class="nm">${esc(n.task || '(無題)')}</div><div class="mt">${meta}</div></div>
+      <div class="txt"><div class="nm">${esc(n.name || '(無題)')}</div><div class="mt">${meta}</div></div>
       ${n.overdue ? '<span class="flag" title="期限超過"></span>' : ''}
     </div>
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
 function renderStats() {
-  const L = S.leaves, over = L.filter((n) => n.overdue).length;
+  const L = S.leaves, over = L.filter((n) => n.overdue).length, tbd = L.filter((n) => isTBD(n.owner)).length;
   $('stats').innerHTML = `
     <div class="stat"><span class="n">${L.length}</span><span class="l">Tasks</span></div>
     <div class="stat"><span class="n">${L.filter((n) => n.sk === 'doing').length}</span><span class="l">In Progress</span></div>
-    <div class="stat${over ? ' alert' : ''}"><span class="n">${over}</span><span class="l">Overdue</span></div>`;
+    <div class="stat${over ? ' alert' : ''}"><span class="n">${over}</span><span class="l">Overdue</span></div>
+    <div class="stat${tbd ? ' tbdk' : ''}" title="タスクオーナーがTBDの件数"><span class="n">${tbd}</span><span class="l">TBD</span></div>`;
 }
 function goToday() {
   if (!S.range) return;
@@ -496,8 +528,10 @@ function openDetail(id) {
   const rem = n.e != null && n.sk !== 'done' ? (n.e >= TODAY ? '残り' + (n.e - TODAY) + '日' : (TODAY - n.e) + '日超過') : '';
   const auto = '<span class="auto">AUTO</span>';
   const kv = [
-    ['WBS', esc(n.wbs || '—')], ['Event', esc(n.event || '—')], ['Category', esc(n.category || '—')],
-    ['Owner', esc(n.owner || '—')],
+    ['WBS', esc(n.wbs || '—')],
+    ['Category', esc(n.category || '—')], ['Task', esc(n.task || '—')],
+    ...(n.level >= 3 ? [['Subtask', esc(n.subtask || '—')]] : []),
+    ['Owner', n.owner ? ownerHtml(n.owner) : '—'], ['Sub', n.sub ? ownerHtml(n.sub) : '—'],
     ['Start', n.s != null ? fmt(n.s, true) + (n.autoS ? auto : '') : '—'],
     ['End', n.e != null ? fmt(n.e, true) + (n.autoE ? auto : '') : '—'],
     ['Duration', [dur, rem].filter(Boolean).join(' / ') || '—'],
@@ -507,8 +541,8 @@ function openDetail(id) {
   kv.push(['KPI', esc(n.kpi || '—')], ['Note', esc(n.note || '—')]);
   $('detail').innerHTML = `
     <div class="eyebrow">${lvl}${n.virtual ? ' — Auto Generated' : ''}</div>
-    <h3>${esc(n.task || '(無題)')}</h3>
-    <div class="tags"><span class="tag inv">${lvl}</span><span class="tag">${esc(ST_LABEL[n.sk])}</span>${n.overdue ? '<span class="tag al">OVERDUE</span>' : ''}</div>
+    <h3>${esc(n.name || '(無題)')}</h3>
+    <div class="tags"><span class="tag inv">${lvl}</span>${n.key1 ? '<span class="tag key">KEY</span>' : ''}${n.level > 1 && n.category ? `<span class="tag">${esc(n.category)}</span>` : ''}<span class="tag">${esc(ST_LABEL[n.sk])}</span>${n.overdue ? '<span class="tag al">OVERDUE</span>' : ''}</div>
     <dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     <button class="pbtn" id="btnClose">Close</button>`;
   $('detailOv').classList.add('open');
@@ -519,11 +553,12 @@ const closeDetail = () => $('detailOv').classList.remove('open');
 /* ================= UI ================= */
 function buildFilterOptions() {
   const fill = (id, key) => {
-    const vals = [...new Set(S.leaves.map((t) => t[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+    const src = key === 'owner' ? S.leaves.flatMap((t) => [t.owner, t.sub]) : S.leaves.map((t) => t[key]);
+    const vals = [...new Set(src.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
     if (S.f[key] && !vals.includes(S.f[key])) S.f[key] = '';
     $(id).innerHTML = '<option value="">All</option>' + vals.map((v) => `<option${v === S.f[key] ? ' selected' : ''}>${esc(v)}</option>`).join('');
   };
-  fill('fEvent', 'event'); fill('fCategory', 'category'); fill('fOwner', 'owner'); fill('fStatus', 'status');
+  fill('fCategory', 'category'); fill('fTask', 'task'); fill('fOwner', 'owner'); fill('fStatus', 'status');
 }
 function setDepth(d) {
   S.collapsed.clear();
@@ -538,7 +573,7 @@ function bindUI() {
   $('btnL2').onclick = () => setDepth(2);
   $('btnL3').onclick = () => setDepth(9);
   $('btnFilter').onclick = () => { $('filters').classList.toggle('open'); $('btnFilter').classList.toggle('on'); };
-  [['fEvent','event'],['fCategory','category'],['fOwner','owner'],['fStatus','status']].forEach(([id, k]) => { $(id).onchange = (e) => { S.f[k] = e.target.value; render(); }; });
+  [['fCategory','category'],['fTask','task'],['fOwner','owner'],['fStatus','status']].forEach(([id, k]) => { $(id).onchange = (e) => { S.f[k] = e.target.value; render(); }; });
   $('hideDone').onchange = (e) => { S.f.hideDone = e.target.checked; savePrefs(); render(); };
   $('onlyOverdue').onchange = (e) => { S.f.onlyOverdue = e.target.checked; render(); };
   let tm; $('q').addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { S.f.q = e.target.value; render(); }, 200); });
