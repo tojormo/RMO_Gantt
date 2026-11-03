@@ -61,9 +61,24 @@ button{cursor:pointer}
 .legend i{display:inline-block;width:18px;height:6px;margin-right:6px;vertical-align:middle}
 .filters{display:none;width:100%;gap:12px 20px;flex-wrap:wrap;padding:8px 0 4px}
 .filters.open{display:flex}
-.filters label{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);flex:1 1 150px}
-.filters select{height:34px;border:0;border-bottom:1px solid var(--hair2);background:transparent;font-size:16px;border-radius:0;-webkit-appearance:none;appearance:none;padding:0 2px;color:var(--ink);letter-spacing:0;text-transform:none}
-@media (min-width:641px){ .filters select{font-size:13px} }
+.filters .fld{display:flex;flex-direction:column;gap:4px;flex:1 1 150px;min-width:0;position:relative}
+.filters .fl{font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+.filters label.chk{display:flex}
+/* 複数選択ドロップダウン */
+.ms-btn{width:100%;height:34px;border:0;border-bottom:1px solid var(--hair2);background:transparent;font-size:16px;padding:0 18px 0 2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;letter-spacing:0}
+.ms-btn::after{content:"▾";position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--mute)}
+.ms.open .ms-btn,.ms-btn:focus{border-bottom-color:var(--ink);outline:none}
+.ms.on .ms-btn{font-weight:700}
+@media (min-width:641px){ .ms-btn{font-size:13px} }
+.ms-pop{display:none;position:absolute;left:0;top:100%;z-index:40;min-width:100%;width:max-content;max-width:min(320px,90vw);max-height:300px;overflow:auto;background:var(--paper);border:1px solid var(--ink);box-shadow:0 8px 24px rgba(11,42,91,.14);padding:6px 0}
+.ms.open .ms-pop{display:block}
+.ms-act{display:flex;gap:14px;padding:4px 12px 8px;border-bottom:1px solid var(--hair)}
+.ms-act button{background:none;border:0;padding:2px 0;font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--ink2)}
+.ms-act button:hover{text-decoration:underline}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+.ms-opt:hover{background:var(--tint)}
+.ms-opt input{width:15px;height:15px;margin:0;accent-color:var(--ink)}
+.ms-opt .bl0{color:var(--mute)}
 .filters .chk{flex-direction:row;align-items:center;gap:8px;flex:0 0 auto;font-size:11px;letter-spacing:.1em;color:var(--ink)}
 .filters .chk input{width:16px;height:16px;accent-color:var(--ink)}
 @media (max-width:640px){ .tb{padding:8px 16px;gap:6px 14px} .legend{display:none} }
@@ -207,13 +222,12 @@ button{cursor:pointer}
     </div>
     <input type="search" class="search" id="q" placeholder="Search">
     <div class="filters" id="filters">
-      <label>Category<select id="fCategory"></select></label>
-      <label>Task<select id="fTask"></select></label>
-      <label>Owner<select id="fOwner"></select></label>
-      <label>Status<select id="fStatus"></select></label>
-      <label class="chk"><input type="checkbox" id="hideDone">完了を隠す</label>
+      <div class="fld"><span class="fl">Category</span><div class="ms" id="fCategory" data-k="category"></div></div>
+      <div class="fld"><span class="fl">Task</span><div class="ms" id="fTask" data-k="task"></div></div>
+      <div class="fld"><span class="fl">Owner</span><div class="ms" id="fOwner" data-k="owner"></div></div>
+      <div class="fld"><span class="fl">Status</span><div class="ms" id="fStatus" data-k="status"></div></div>
       <label class="chk"><input type="checkbox" id="onlyOverdue">期限超過のみ</label>
-      <button class="txtbtn" id="btnClear">Clear</button>
+      <button class="txtbtn" id="btnClear" title="フィルタを初期状態に戻す">Reset</button>
     </div>
   </div>
 
@@ -235,7 +249,7 @@ button{cursor:pointer}
 <script>
 /* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のまま */
 const API_URL = 'https://script.google.com/macros/s/AKfycbxz9LsWMF19uylm_T7s3-150QOUiMbcUg98UxoVwD9H8-zPWDxdypJplFYwXVIELGU3hA/exec';
-const PW_KEY = 'gantt_pw', PREF_KEY = 'gantt_prefs_v3';
+const PW_KEY = 'gantt_pw', PREF_KEY = 'gantt_prefs_v4';
 const DAY = 86400000;
 const ZOOMS = { day: 28, week: 10, month: 3.5 };
 const WD = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -254,12 +268,17 @@ const isTBD = (v) => String(v || '').normalize('NFKC').trim().toUpperCase() === 
 /* 担当者表示：TBDなら赤地で強調 */
 const ownerHtml = (v) => isTBD(v) ? `<span class="tbd">${esc(v)}</span>` : esc(v);
 const isMarked = (v) => String(v || '').normalize('NFKC').trim() === '1';
-const EMPTY_FILTER = { category:'', task:'', owner:'', status:'', q:'', hideDone:false, onlyOverdue:false };
+/* 複数選択フィルタ：配列が空なら「すべて」。statusDefault=true の間は初期値（Pending・Closeを除外）を適用 */
+const MULTI = ['category', 'task', 'owner', 'status'];
+const BLANK = '';                       // Status 空欄を表す値
+const BLANK_LABEL = '(空欄)';
+const DEFAULT_EXCLUDE_SK = ['hold', 'done'];   // 既定で除外するステータス（Pending / Close）
+const newFilter = () => ({ category:[], task:[], owner:[], status:[], statusDefault:true, q:'', onlyOverdue:false });
 const $ = (id) => document.getElementById(id);
 const S = {
   roots: [], all: [], leaves: [],
   zoom: innerWidth <= 640 ? 'week' : 'day',
-  f: { ...EMPTY_FILTER },
+  f: newFilter(), opts: {},
   collapsed: new Set(), toToday: true, range: null,
 };
 const TODAY = (() => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / DAY; })();
@@ -335,7 +354,7 @@ function statusKey(s) {
   const v = (s || '').toLowerCase();
   if (!v) return 'todo';
   if (/未着手|未開始|未完了|todo|not ?started|incomplete|open/.test(v)) return 'todo'; // 「未完了」が「完了」に誤判定されないよう先に判定
-  if (/完了|済|done|complete|closed/.test(v)) return 'done';
+  if (/完了|済|done|complete|closed?/.test(v)) return 'done';   // 「Close」も完了扱い
   if (/遅延|遅れ|delay|late|overdue/.test(v)) return 'late';
   if (/保留|中止|中断|hold|pending|cancel/.test(v)) return 'hold';
   if (/進行|着手|対応中|作業中|実施中|progress|doing|wip/.test(v)) return 'doing';
@@ -407,29 +426,39 @@ function buildTree(rows) {
       n.sk = n.status ? statusKey(n.status)
         : n.done === n.total ? 'done' : n.children.some((c) => c.sk !== 'todo') ? 'doing' : 'todo';
     }
-    n.overdue = n.e != null && n.e < TODAY && n.sk !== 'done';
+    n.overdue = n.e != null && n.e < TODAY && !['done', 'hold'].includes(n.sk);   // Close・Pending は期限超過に数えない
   };
   roots.forEach(roll);
   S.roots = roots; S.all = all; S.leaves = leaves;
 }
 
 /* ================= Filter ================= */
-function filtering() { const f = S.f; return !!(f.task || f.category || f.owner || f.status || f.q.trim() || f.hideDone || f.onlyOverdue); }
+function filtering() { const f = S.f; return !!(MULTI.some((k) => f[k].length) || f.q.trim() || f.onlyOverdue); }
+/* 検索語があるときは折りたたみを無視して該当行をすべて表示 */
+const searching = () => !!S.f.q.trim();
+const inSel = (arr, v) => !arr.length || arr.includes(v);
 function selfMatch(n) {
   const f = S.f, q = f.q.trim().toLowerCase();
-  return (!f.category || n.category === f.category) && (!f.task || n.task === f.task) &&
-    (!f.owner || n.owner === f.owner || n.sub === f.owner) && (!f.status || n.status === f.status) &&
-    (!f.hideDone || n.sk !== 'done') && (!f.onlyOverdue || n.overdue) &&
+  return inSel(f.category, n.category) && inSel(f.task, n.task) &&
+    (!f.owner.length || f.owner.includes(n.owner) || f.owner.includes(n.sub)) &&
+    inSel(f.status, n.status || BLANK) && (!f.onlyOverdue || n.overdue) &&
     (!q || [n.wbs, n.category, n.task, n.subtask, n.owner, n.sub, n.status, n.kpi, n.note].join(' ').toLowerCase().includes(q));
 }
+/* KPI用：フィルタに一致する末端タスク */
+const matchedLeaves = () => (filtering() ? S.leaves.filter(selfMatch) : S.leaves);
 function flatten() {
   const on = filtering(), out = [];
-  const vis = (n) => { const kid = n.children.map(vis).some(Boolean); return (n._v = kid || (!n.virtual && selfMatch(n))); };
+  // 親行は配下に一致があれば表示（検索時のみ親行自身の一致でも表示）
+  const vis = (n) => {
+    const kid = n.children.map(vis).some(Boolean);
+    const self = !n.virtual && (n.children.length ? searching() : true) && selfMatch(n);
+    return (n._v = kid || self);
+  };
   if (on) S.roots.forEach(vis);
   const walk = (n) => {
     if (on && !n._v) return;
     out.push(n);
-    if (!on && S.collapsed.has(n.key)) return;
+    if (!searching() && S.collapsed.has(n.key)) return;
     n.children.forEach(walk);
   };
   S.roots.forEach(walk);
@@ -484,7 +513,7 @@ function render() {
 }
 function rowHtml(n, R, dw, W) {
   const hasKids = n.children.length > 0;
-  const col = !filtering() && S.collapsed.has(n.key);
+  const col = !searching() && S.collapsed.has(n.key);
   const period = n.s != null ? fmt(n.s) + ' – ' + fmt(n.e) : '日付未設定';
   const wbs = n.wbs && `<b>${esc(n.wbs)}</b>`;
   const meta = (n.level === 3 || !hasKids ? [wbs, [n.owner, n.sub].filter(Boolean).map(ownerHtml).join(' / '), period, esc(n.status)] : [wbs, period, n.done + '/' + n.total])
@@ -507,9 +536,9 @@ function rowHtml(n, R, dw, W) {
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
 function renderStats() {
-  const L = S.leaves, over = L.filter((n) => n.overdue).length, tbd = L.filter((n) => isTBD(n.owner)).length;
+  const L = matchedLeaves(), over = L.filter((n) => n.overdue).length, tbd = L.filter((n) => isTBD(n.owner)).length;
   $('stats').innerHTML = `
-    <div class="stat"><span class="n">${L.length}</span><span class="l">Tasks</span></div>
+    <div class="stat" title="${filtering() ? 'フィルタ適用中の件数' : '全件'}"><span class="n">${L.length}</span><span class="l">Tasks</span></div>
     <div class="stat"><span class="n">${L.filter((n) => n.sk === 'doing').length}</span><span class="l">In Progress</span></div>
     <div class="stat${over ? ' alert' : ''}"><span class="n">${over}</span><span class="l">Overdue</span></div>
     <div class="stat${tbd ? ' tbdk' : ''}" title="タスクオーナーがTBDの件数"><span class="n">${tbd}</span><span class="l">TBD</span></div>`;
@@ -552,13 +581,66 @@ const closeDetail = () => $('detailOv').classList.remove('open');
 
 /* ================= UI ================= */
 function buildFilterOptions() {
-  const fill = (id, key) => {
-    const src = key === 'owner' ? S.leaves.flatMap((t) => [t.owner, t.sub]) : S.leaves.map((t) => t[key]);
-    const vals = [...new Set(src.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
-    if (S.f[key] && !vals.includes(S.f[key])) S.f[key] = '';
-    $(id).innerHTML = '<option value="">All</option>' + vals.map((v) => `<option${v === S.f[key] ? ' selected' : ''}>${esc(v)}</option>`).join('');
-  };
-  fill('fCategory', 'category'); fill('fTask', 'task'); fill('fOwner', 'owner'); fill('fStatus', 'status');
+  MULTI.forEach((k) => {
+    let vals;
+    if (k === 'owner') vals = S.leaves.flatMap((t) => [t.owner, t.sub]).filter(Boolean);
+    else if (k === 'status') vals = S.leaves.map((t) => t.status || BLANK);
+    else vals = S.leaves.map((t) => t[k]).filter(Boolean);
+    vals = [...new Set(vals)];
+    if (k === 'status') {
+      const order = { todo:0, doing:1, late:2, other:3, hold:4, done:5 };
+      vals.sort((a, b) => (a === BLANK) - (b === BLANK) || order[statusKey(a)] - order[statusKey(b)] || a.localeCompare(b, 'ja'));
+    } else vals.sort((a, b) => a.localeCompare(b, 'ja'));
+    S.opts[k] = vals;
+    S.f[k] = S.f[k].filter((v) => vals.includes(v));
+  });
+  if (S.f.statusDefault) S.f.status = defaultStatus();
+  MULTI.forEach(renderMs);
+}
+/* 既定のStatus選択：Pending・Close 以外すべて（空欄を含む） */
+const defaultStatus = () => (S.opts.status || []).filter((v) => !(v && DEFAULT_EXCLUDE_SK.includes(statusKey(v))));
+const msLabel = (k, v) => (k === 'status' && v === BLANK ? BLANK_LABEL : v);
+function renderMs(k) {
+  const el = document.querySelector(`.ms[data-k="${k}"]`), vals = S.opts[k] || [], sel = S.f[k];
+  const all = !sel.length;
+  const txt = all ? 'All' : sel.length === 1 ? msLabel(k, sel[0]) : `${msLabel(k, sel[0])} ほか${sel.length - 1}件`;
+  const open = el.classList.contains('open');
+  el.classList.toggle('on', !all);
+  el.innerHTML = `<button type="button" class="ms-btn" title="${esc(all ? 'All' : sel.map((v) => msLabel(k, v)).join(', '))}">${esc(txt)}</button>
+    <div class="ms-pop"><div class="ms-act"><button type="button" data-act="all">すべて</button>${k === 'status' ? '<button type="button" data-act="def">初期値</button>' : ''}</div>
+    ${vals.map((v, i) => `<label class="ms-opt"><input type="checkbox" data-i="${i}"${all || sel.includes(v) ? ' checked' : ''}><span class="${v === BLANK ? 'bl0' : ''}">${esc(msLabel(k, v))}</span></label>`).join('')}</div>`;
+  el.classList.toggle('open', open);
+}
+/* チェック操作：全選択または全解除になったら「すべて」（=フィルタなし）に戻す */
+function toggleMs(k, v) {
+  const vals = S.opts[k] || [], cur = S.f[k].length ? S.f[k] : vals.slice();
+  let next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+  next = vals.filter((x) => next.includes(x));
+  S.f[k] = next.length === vals.length || !next.length ? [] : next;
+  if (k === 'status') S.f.statusDefault = false;
+}
+function bindMs() {
+  document.querySelectorAll('.ms').forEach((el) => {
+    const k = el.dataset.k;
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.ms-btn')) {
+        const was = el.classList.contains('open');
+        document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open'));
+        el.classList.toggle('open', !was); return;
+      }
+      const act = e.target.closest('[data-act]');
+      if (act) {
+        S.f[k] = act.dataset.act === 'def' ? defaultStatus() : [];
+        if (k === 'status') S.f.statusDefault = act.dataset.act === 'def';
+        renderMs(k); render(); return;
+      }
+    });
+    el.addEventListener('change', (e) => {
+      const i = e.target.dataset.i; if (i == null) return;
+      toggleMs(k, (S.opts[k] || [])[+i]); renderMs(k); render();
+    });
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.ms')) document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); });
 }
 function setDepth(d) {
   S.collapsed.clear();
@@ -573,24 +655,23 @@ function bindUI() {
   $('btnL2').onclick = () => setDepth(2);
   $('btnL3').onclick = () => setDepth(9);
   $('btnFilter').onclick = () => { $('filters').classList.toggle('open'); $('btnFilter').classList.toggle('on'); };
-  [['fCategory','category'],['fTask','task'],['fOwner','owner'],['fStatus','status']].forEach(([id, k]) => { $(id).onchange = (e) => { S.f[k] = e.target.value; render(); }; });
-  $('hideDone').onchange = (e) => { S.f.hideDone = e.target.checked; savePrefs(); render(); };
+  bindMs();
   $('onlyOverdue').onchange = (e) => { S.f.onlyOverdue = e.target.checked; render(); };
   let tm; $('q').addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { S.f.q = e.target.value; render(); }, 200); });
-  $('btnClear').onclick = () => { S.f = { ...EMPTY_FILTER }; $('q').value = ''; syncControls(); buildFilterOptions(); savePrefs(); render(); };
+  $('btnClear').onclick = () => { S.f = newFilter(); $('q').value = ''; syncControls(); buildFilterOptions(); render(); };
   $('chart').addEventListener('click', (e) => {
     const row = e.target.closest('.row'); if (!row) return;
     const n = S.all.find((x) => x.id === row.dataset.id); if (!n) return;
     // 親行(LV1/LV2)：左の名前欄タップ→開閉、右のバー領域タップ→詳細
     if (n.children.length && e.target.closest('.cl')) {
-      if (filtering()) return openDetail(n.id);
+      if (searching()) return openDetail(n.id);
       S.collapsed.has(n.key) ? S.collapsed.delete(n.key) : S.collapsed.add(n.key);
       savePrefs(); render(); return;
     }
     openDetail(n.id);
   });
   $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDetail(); document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); } });
   $('btnReload').onclick = () => { const pw = localStorage.getItem(PW_KEY); pw ? fetchData(pw) : showLogin(); };
   $('btnLogout').onclick = () => {
     if (!confirm('保存されたパスワードを削除してログアウトしますか？')) return;
@@ -603,17 +684,16 @@ function bindUI() {
 }
 function syncControls() {
   document.querySelectorAll('#zoom button').forEach((b) => b.classList.toggle('on', b.dataset.z === S.zoom));
-  $('hideDone').checked = S.f.hideDone; $('onlyOverdue').checked = S.f.onlyOverdue;
+  $('onlyOverdue').checked = S.f.onlyOverdue;
 }
 function loadPrefs() {
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
     if (p.zoom in ZOOMS) S.zoom = p.zoom;
-    S.f.hideDone = !!p.hideDone;
     if (Array.isArray(p.collapsed)) S.collapsed = new Set(p.collapsed);
   } catch (_) {}
 }
-function savePrefs() { localStorage.setItem(PREF_KEY, JSON.stringify({ zoom: S.zoom, hideDone: S.f.hideDone, collapsed: [...S.collapsed] })); }
+function savePrefs() { localStorage.setItem(PREF_KEY, JSON.stringify({ zoom: S.zoom, collapsed: [...S.collapsed] })); }
 function showLogin(msg) { $('loginMsg').textContent = msg || ''; $('pw').value = ''; $('loginOv').classList.add('open'); setTimeout(() => $('pw').focus(), 50); }
 const hideLogin = () => $('loginOv').classList.remove('open');
 const setLoading = (on) => $('loading').classList.toggle('on', on);
