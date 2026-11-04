@@ -13,7 +13,8 @@
   --ink:#0b2a5b; --ink2:#2b4a7a; --mute:#7a8fae; --hair:#dfe7f3; --hair2:#c3d2e8; --paper:#ffffff; --tint:#f2f6fc;
   --lv1:#1e4fa3; --lv2:#5b8bd6; --lv3:#b3cdf0;
   --accent:#e4002b;
-  --key:#0e8a7e; --keybg:#e2f3f0;   /* 重要工程（mark=1）のハイライト色 */
+  --key:#0e8a7e; --keybg:#e2f3f0;   /* 報告（mark=1）のハイライト色 */
+  --dis:#e8890c; --disbg:#fdf1e1;   /* 議論（mark=2）のハイライト色 */
   --left:340px; --h1:56px; --h2:46px; --h3:40px;
   --font:"Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
 }
@@ -129,6 +130,16 @@ button{cursor:pointer}
 .tbd{display:inline-block;padding:0 5px;background:var(--accent);color:var(--paper);font-weight:700;letter-spacing:.08em;line-height:1.5}
 .stat.tbdk .n{color:var(--paper);background:var(--accent);padding:2px 6px}
 .flag{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+/* 論点インジケーター（備考に記入がある行） */
+.iss{flex:0 0 auto;min-width:16px;height:16px;padding:0 3px;display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-size:10px;font-weight:800;line-height:1;letter-spacing:0;cursor:pointer;font-feature-settings:"tnum"}
+.iss.sum{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.iss:hover{opacity:.8}
+.tip{position:fixed;z-index:60;display:none;max-width:min(340px,90vw);padding:10px 12px;background:var(--paper);border:1px solid var(--ink);box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 14%,transparent);font-size:12px;line-height:1.6;color:var(--ink);pointer-events:none}
+.tip.open{display:block}
+.tip .th{font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute);margin-bottom:4px}
+.tip .ti{white-space:pre-wrap;word-break:break-word}
+.tip .ti+.ti{margin-top:6px;padding-top:6px;border-top:1px solid var(--hair)}
+.tip .tw{font-weight:700;color:var(--ink2);margin-right:6px}
 .ct{position:relative;flex:0 0 auto}
 .br{position:absolute;top:50%;transform:translateY(-50%);min-width:3px}
 .l1 .br{height:20px;background:var(--lv1)}
@@ -141,6 +152,14 @@ button{cursor:pointer}
 .l3.key .br,.l2.key .br{height:16px}
 .row.key .bl{color:var(--ink);font-weight:800}
 .tag.key{background:var(--key);border-color:var(--key);color:var(--paper)}
+/* 議論（mark=2） */
+.row.dis .cl,.row.dis:hover .cl{background:var(--disbg);box-shadow:inset 4px 0 0 var(--dis)}
+.row.dis .ct{background:color-mix(in srgb,var(--dis) 7%,transparent)}
+.row.dis .nm{font-weight:800;color:var(--ink)}
+.row.dis .br{background:var(--dis);box-shadow:0 0 0 2px color-mix(in srgb,var(--dis) 25%,transparent)}
+.l3.dis .br,.l2.dis .br{height:16px}
+.row.dis .bl{color:var(--ink);font-weight:800}
+.tag.dis{background:var(--dis);border-color:var(--dis);color:var(--paper)}
 .br.done{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
 .br.over::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;background:var(--accent)}
 .br .pg{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.28)}
@@ -174,6 +193,11 @@ button{cursor:pointer}
 .tag{font-size:10px;font-weight:600;letter-spacing:.14em;padding:4px 8px;border:1px solid var(--ink)}
 .tag.inv{background:var(--ink);color:var(--paper)}
 .tag.al{border-color:var(--accent);color:var(--accent)}
+.issbox{margin:0 0 20px;padding:12px 14px;border-left:3px solid var(--ink);background:var(--tint)}
+.issbox .th{font-size:9px;font-weight:600;letter-spacing:.2em;color:var(--mute);margin-bottom:6px}
+.issbox .ti{font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.issbox .ti+.ti{margin-top:8px;padding-top:8px;border-top:1px solid var(--hair2)}
+.issbox .tw{font-weight:700;margin-right:6px}
 .kv{margin:0;border-top:1px solid var(--ink)}
 .kv div{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair)}
 .kv dt{font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);padding-top:3px}
@@ -217,7 +241,8 @@ button{cursor:pointer}
       <button class="txtbtn" id="btnFilter">Filter</button>
     </div>
     <div class="legend">
-      <span><i style="background:var(--key)"></i>KEY</span>
+      <span><i style="background:var(--key)"></i>報告</span>
+      <span><i style="background:var(--dis)"></i>議論</span>
       <span><i style="background:var(--lv1)"></i>LV1</span>
       <span><i style="background:var(--lv2)"></i>LV2</span>
       <span><i style="background:var(--lv3)"></i>LV3</span>
@@ -247,6 +272,7 @@ button{cursor:pointer}
 </div>
 
 <div class="ov dov" id="detailOv"><div class="dt" id="detail"></div></div>
+<div class="tip" id="tip"></div>
 
 <script>
 /* 外部ホスティング時のみ GASウェブアプリURL(/exec) を設定。GASから開く場合は空のまま */
@@ -269,7 +295,9 @@ const NAME_BY_LEVEL = { 1: ['category', 'subtask', 'task'], 2: ['task', 'subtask
 const isTBD = (v) => String(v || '').normalize('NFKC').trim().toUpperCase() === 'TBD';
 /* 担当者表示：TBDなら赤地で強調 */
 const ownerHtml = (v) => isTBD(v) ? `<span class="tbd">${esc(v)}</span>` : esc(v);
-const isMarked = (v) => String(v || '').normalize('NFKC').trim() === '1';
+/* mark欄：1=報告、2=議論 */
+const markType = (v) => ({ '1': 'rep', '2': 'dis' })[String(v || '').normalize('NFKC').trim()] || '';
+const MARK = { rep: { cls: 'key', label: '報告' }, dis: { cls: 'dis', label: '議論' } };
 /* 複数選択フィルタ：配列が空なら「すべて」。statusDefault=true の間は初期値（Pending・Closeを除外）を適用 */
 const MULTI = ['category', 'task', 'owner', 'status'];
 const BLANK = '';                       // Status 空欄を表す値
@@ -309,11 +337,12 @@ function toTasks(res) {
   return (res.rows || []).map((r) => {
     const t = { row: r._row };
     for (const k in FIELDS) t[k] = r[FIELDS[k]] || '';
-    t.key1 = isMarked(t.mark);
+    t.mk = markType(t.mark);
     // 備考の「Sub: 〇〇」をサブ担当として分離（残りは備考に残す）
     const m = t.note.match(/Sub\s*[:：]\s*([^/／\n]+)/i);
     t.sub = m ? m[1].trim() : '';
     t.note = m ? t.note.replace(m[0], '').replace(/^[\s/／]+|[\s/／]+$/g, '') : t.note;
+    t.issue = String(r['論点'] || t.note || '').trim();   // 論点：「論点」列があれば優先、無ければ備考
     return t;
   });
 }
@@ -394,7 +423,7 @@ function buildTree(rows) {
       p = add({ id: 'v' + pk, key: pk, segs: ps, level: ps.length, virtual: true, ownS: null, ownE: null,
         wbs: noWbs ? '' : pk,
         name: noWbs ? 'WBS未設定' : (ps.length === 2 ? n.task : n.category) || 'WBS ' + pk,
-        category: n.category || '', task: ps.length === 2 ? n.task || '' : '', subtask: '', key1: false,
+        category: n.category || '', task: ps.length === 2 ? n.task || '' : '', subtask: '', mk: '',
         owner: '', sub: '', status: '', kpi: '', note: '' });
       link(p);
     }
@@ -412,6 +441,7 @@ function buildTree(rows) {
   const leaves = [];
   const roll = (n) => {
     n.children.forEach(roll);
+    n.iss = (n.issue ? 1 : 0) + n.children.reduce((a, c) => a + c.iss, 0);   // 自身＋配下の論点数
     const kids = n.children.filter((c) => c.s != null);
     const cs = kids.length ? Math.min(...kids.map((c) => c.s)) : null;
     const ce = kids.length ? Math.max(...kids.map((c) => c.e)) : null;
@@ -531,14 +561,37 @@ function rowHtml(n, R, dw, W) {
     bar = `<div class="br${n.sk === 'done' ? ' done' : ''}${n.overdue ? ' over' : ''}" style="left:${x}px;width:${w}px">${pg}</div>`
         + `<span class="bl" style="left:${x + w + 8}px">${esc(n.name)}</span>`;
   }
-  return `<div class="row l${n.level}${n.key1 ? ' key' : ''}${col ? ' collapsed' : ''}" data-id="${esc(n.id)}" data-key="${esc(n.key)}">
+  return `<div class="row l${n.level}${n.mk ? ' ' + MARK[n.mk].cls : ''}${col ? ' collapsed' : ''}" data-id="${esc(n.id)}" data-key="${esc(n.key)}">
     <div class="cl"><span class="ind"></span>
       <span class="tg${hasKids ? '' : ' none'}" data-tg="1">▼</span>
       <div class="txt"><div class="nm">${esc(n.name || '(無題)')}</div><div class="mt">${meta}</div></div>
-      ${n.overdue ? '<span class="flag" title="期限超過"></span>' : ''}
+      ${issHtml(n, col)}${n.overdue ? '<span class="flag" title="期限超過"></span>' : ''}
     </div>
     <div class="ct" style="width:${W}px">${bar}</div></div>`;
 }
+/* 論点アイコン：自身に論点→「!」、折りたたみ中の親で配下に論点→「!件数」 */
+function issHtml(n, col) {
+  if (n.issue) return `<span class="iss" data-iss="${esc(n.id)}" aria-label="論点あり">!</span>`;
+  if (col && n.iss) return `<span class="iss sum" data-iss="${esc(n.id)}" aria-label="配下に論点${n.iss}件">!${n.iss}</span>`;
+  return '';
+}
+const issuesOf = (n) => { const out = []; const walk = (x) => { if (x.issue) out.push(x); x.children.forEach(walk); }; walk(n); return out; };
+const issItem = (x, withName) => `<div class="ti">${withName ? `<span class="tw">${esc(x.wbs || '')} ${esc(x.name || '')}</span>` : ''}${esc(x.issue)}</div>`;
+function showTip(el) {
+  const n = S.all.find((x) => x.id === el.dataset.iss); if (!n) return;
+  const list = issuesOf(n), self = list.length === 1 && list[0] === n, max = 8;
+  const tip = $('tip');
+  tip.innerHTML = `<div class="th">論点${self ? '' : '（' + list.length + '件）'}</div>`
+    + list.slice(0, max).map((x) => issItem(x, !self)).join('')
+    + (list.length > max ? `<div class="ti">ほか${list.length - max}件（クリックで詳細）</div>` : '');
+  tip.classList.add('open');
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.right + 8, y = r.top - 4;
+  if (x + tw > innerWidth - 8) x = Math.max(8, r.left - tw - 8);
+  if (y + th > innerHeight - 8) y = Math.max(8, innerHeight - th - 8);
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => $('tip').classList.remove('open');
 function renderStats() {
   const L = matchedLeaves(), over = L.filter((n) => n.overdue).length, tbd = L.filter((n) => isTBD(n.owner)).length;
   $('stats').innerHTML = `
@@ -571,13 +624,17 @@ function openDetail(id) {
     ['Status', esc(n.status || (n.children.length ? ST_LABEL[n.sk] + '（自動）' : '—'))],
   ];
   if (n.children.length) kv.push(['Progress', n.done + ' / ' + n.total + '（' + Math.round(n.done / n.total * 100) + '%）']);
-  kv.push(['KPI', esc(n.kpi || '—')], ['Note', esc(n.note || '—')]);
+  kv.push(['KPI', esc(n.kpi || '—')]);
+  if (n.note && n.note !== n.issue) kv.push(['Note', esc(n.note)]);
+  const il = issuesOf(n), self = il.length === 1 && il[0] === n;
+  const issBox = il.length ? `<div class="issbox"><div class="th">論点${self ? '' : '（' + il.length + '件）'}</div>${il.map((x) => issItem(x, !self)).join('')}</div>` : '';
   $('detail').innerHTML = `
     <div class="eyebrow">${lvl}${n.virtual ? ' — Auto Generated' : ''}</div>
     <h3>${esc(n.name || '(無題)')}</h3>
-    <div class="tags"><span class="tag inv">${lvl}</span>${n.key1 ? '<span class="tag key">KEY</span>' : ''}${n.level > 1 && n.category ? `<span class="tag">${esc(n.category)}</span>` : ''}<span class="tag">${esc(ST_LABEL[n.sk])}</span>${n.overdue ? '<span class="tag al">OVERDUE</span>' : ''}</div>
-    <dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <div class="tags"><span class="tag inv">${lvl}</span>${n.mk ? `<span class="tag ${MARK[n.mk].cls}">${MARK[n.mk].label}</span>` : ''}${n.level > 1 && n.category ? `<span class="tag">${esc(n.category)}</span>` : ''}<span class="tag">${esc(ST_LABEL[n.sk])}</span>${n.overdue ? '<span class="tag al">OVERDUE</span>' : ''}</div>
+    ${issBox}<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     <button class="pbtn" id="btnClose">Close</button>`;
+  hideTip();
   $('detailOv').classList.add('open');
   $('btnClose').onclick = closeDetail;
 }
@@ -663,7 +720,11 @@ function bindUI() {
   $('onlyOverdue').onchange = (e) => { S.f.onlyOverdue = e.target.checked; render(); };
   let tm; $('q').addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { S.f.q = e.target.value; render(); }, 200); });
   $('btnClear').onclick = () => { S.f = newFilter(); $('q').value = ''; syncControls(); buildFilterOptions(); render(); };
+  $('chart').addEventListener('mouseover', (e) => { const ic = e.target.closest('.iss'); if (ic) showTip(ic); });
+  $('chart').addEventListener('mouseout', (e) => { if (e.target.closest('.iss')) hideTip(); });
+  $('scroller').addEventListener('scroll', hideTip, { passive: true });
   $('chart').addEventListener('click', (e) => {
+    const ic = e.target.closest('.iss'); if (ic) { hideTip(); return openDetail(ic.dataset.iss); }   // 論点アイコン→詳細
     const row = e.target.closest('.row'); if (!row) return;
     const n = S.all.find((x) => x.id === row.dataset.id); if (!n) return;
     // 親行(LV1/LV2)：左の名前欄タップ→開閉、右のバー領域タップ→詳細
@@ -675,7 +736,7 @@ function bindUI() {
     openDetail(n.id);
   });
   $('detailOv').addEventListener('click', (e) => { if (e.target === $('detailOv')) closeDetail(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDetail(); document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDetail(); hideTip(); document.querySelectorAll('.ms.open').forEach((m) => m.classList.remove('open')); } });
   $('btnReload').onclick = () => { const pw = localStorage.getItem(PW_KEY); pw ? fetchData(pw) : showLogin(); };
   $('btnLogout').onclick = () => {
     if (!confirm('保存されたパスワードを削除してログアウトしますか？')) return;
