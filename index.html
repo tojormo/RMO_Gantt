@@ -111,6 +111,8 @@ button{cursor:pointer}
 .cl{position:sticky;left:0;z-index:3;width:var(--left);flex:0 0 var(--left);background:var(--paper);border-right:1px solid var(--hair);display:flex;align-items:center;gap:8px;padding:0 14px 0 0;overflow:hidden}
 .row:hover .cl{background:var(--tint)}
 .row:hover .ct{background:rgba(30,79,163,.04)}
+.row.l1 .cl,.row.l1 .ct{background-image:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--ink) 9%,transparent) 0 1.5px,transparent 1.5px 6px)}  /* LV1 のみ網掛け */
+.row.l1 .cl{background-color:var(--tint)}
 .ind{flex:0 0 auto}
 .l1 .ind{width:14px}.l2 .ind{width:28px}.l3 .ind{width:42px}
 @media (max-width:640px){ .l1 .ind{width:10px}.l2 .ind{width:18px}.l3 .ind{width:26px} }
@@ -360,6 +362,7 @@ function statusKey(s) {
   if (/進行|着手|対応中|作業中|実施中|progress|doing|wip/.test(v)) return 'doing';
   return 'other';
 }
+const isOpenWip = (s) => /^(open|wip)$/i.test(String(s || '').normalize('NFKC').trim());
 /* "1" → LV1, "1.2" → LV2, "1.2.3" → LV3（"1.0.0"や"1.2.0"のような末尾0は上位扱い） */
 function parseWbs(w) {
   const segs = String(w || '').normalize('NFKC').trim().replace(/。/g, '.').split(/[.\-]/).map((s) => s.trim()).filter(Boolean);
@@ -426,7 +429,8 @@ function buildTree(rows) {
       n.sk = n.status ? statusKey(n.status)
         : n.done === n.total ? 'done' : n.children.some((c) => c.sk !== 'todo') ? 'doing' : 'todo';
     }
-    n.overdue = n.e != null && n.e < TODAY && !['done', 'hold'].includes(n.sk);   // Close・Pending は期限超過に数えない
+    /* 期限超過は Status が Open / WIP のものだけ。Status 空欄の親は子に期限超過があれば立てる */
+    n.overdue = n.status ? (isOpenWip(n.status) && n.e != null && n.e < TODAY) : n.children.some((c) => c.overdue);
   };
   roots.forEach(roll);
   S.roots = roots; S.all = all; S.leaves = leaves;
